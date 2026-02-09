@@ -1,0 +1,590 @@
+/* Sanctuary Hotel Booking - Admin Styles */
+
+.shb-admin-wrap {
+    max-width: 1400px;
+}
+
+/* Stats Grid */
+.shb-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin: 20px 0 40px;
+}
+
+@media (max-width: 1200px) {
+    .shb-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+    .shb-stats-grid { grid-template-columns: 1fr; }
+}
+
+.shb-stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.shb-stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shb-stat-icon .dashicons {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: #fff;
+}
+
+.shb-stat-rooms { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.shb-stat-bookings { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.shb-stat-revenue { background: linear-gradient(135deg, #10b981, #059669); }
+.shb-stat-pending { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+.shb-stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.shb-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.2;
+}
+
+.shb-stat-label {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* Quick Actions */
+.shb-quick-actions {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.shb-quick-actions h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+}
+
+.shb-action-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.shb-action-buttons .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shb-action-buttons .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Recent Bookings */
+.shb-recent-bookings {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.shb-recent-bookings h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+}
+
+/* Shortcode Reference */
+.shb-shortcode-reference {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.shb-shortcode-reference h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+}
+
+.shb-shortcode-reference code {
+    background: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+/* Settings Section */
+.shb-settings-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.shb-settings-section h2 {
+    margin: 0 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 18px;
+}
+
+/* Status Badges */
+.shb-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.shb-status-pending { background: #fef3c7; color: #92400e; }
+.shb-status-confirmed { background: #d1fae5; color: #065f46; }
+.shb-status-paid { background: #d1fae5; color: #065f46; }
+.shb-status-cancelled { background: #fee2e2; color: #991b1b; }
+.shb-status-checked_in { background: #dbeafe; color: #1e40af; }
+.shb-status-checked_out { background: #f3f4f6; color: #374151; }
+.shb-status-active { background: #d1fae5; color: #065f46; }
+.shb-status-inactive { background: #f3f4f6; color: #374151; }
+
+/* Pricing */
+.shb-increase { color: #dc2626; }
+.shb-decrease { color: #059669; }
+
+/* Filter Bar */
+.shb-filter-bar {
+    margin: 20px 0;
+}
+
+.shb-filter-bar form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Modal */
+.shb-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+}
+
+.shb-modal-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.shb-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #64748b;
+    line-height: 1;
+}
+
+.shb-modal-close:hover {
+    color: #1e293b;
+}
+
+.shb-modal-content h2 {
+    margin: 0 0 24px;
+    font-size: 20px;
+}
+
+.shb-modal-content p {
+    margin-bottom: 16px;
+}
+
+.shb-modal-content label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #374151;
+}
+
+.shb-modal-content input,
+.shb-modal-content select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.shb-modal-content .description {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* Status Select */
+.shb-status-select {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+/* Amenities Grid */
+.shb-amenities-grid label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.shb-amenities-grid input[type="checkbox"] {
+    width: auto;
+}
+
+/* Action Group */
+.shb-action-group {
+    display: flex;
+    gap: 4px;
+}
+
+/* Spin animation for loading */
+@keyframes rotation {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ==============================
+   Shortcode Accordion
+   ============================== */
+.shb-accordion-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.shb-accordion-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+.shb-accordion-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s;
+}
+.shb-accordion-toggle:hover {
+    background: #f8fafc;
+}
+.shb-sc-badge code {
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.shb-sc-desc {
+    flex: 1;
+    font-size: 13px;
+    color: #64748b;
+}
+.shb-accordion-arrow {
+    transition: transform 0.25s;
+    color: #94a3b8;
+}
+.shb-accordion-item.open .shb-accordion-arrow {
+    transform: rotate(180deg);
+}
+.shb-accordion-body {
+    display: none;
+    padding: 0 16px 16px;
+    border-top: 1px solid #f1f5f9;
+}
+.shb-accordion-item.open .shb-accordion-body {
+    display: block;
+}
+/* Columns layout inside accordion */
+.shb-sc-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 14px;
+}
+@media (max-width: 960px) {
+    .shb-sc-columns {
+        grid-template-columns: 1fr;
+    }
+}
+.shb-sc-preview h4, .shb-sc-selectors h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 10px;
+}
+.shb-sc-preview-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+}
+.shb-code-block {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 12px;
+    line-height: 2;
+    max-height: 320px;
+    overflow-y: auto;
+    white-space: pre-line;
+}
+.shb-code-block code {
+    background: #e2e8f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #0f172a;
+}
+/* Usage section */
+.shb-sc-usage {
+    margin-top: 14px;
+    padding-bottom: 10px;
+}
+.shb-sc-usage h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 8px;
+}
+.shb-sc-attrs {
+    width: auto;
+    border-collapse: collapse;
+}
+.shb-sc-attrs td {
+    padding: 4px 12px 4px 0;
+    font-size: 13px;
+    vertical-align: top;
+}
+.shb-sc-attrs td:first-child code {
+    background: #e2e8f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+/* ==============================
+   Bookings Calendar View
+   ============================== */
+.shb-bookings-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.shb-view-toggle {
+    display: flex;
+    gap: 4px;
+}
+.shb-filter-inline {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+/* Calendar controls */
+.shb-calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.shb-calendar-nav {
+    display: flex;
+    align-items: center;
+}
+.shb-calendar-filter select {
+    min-width: 180px;
+}
+/* Legend */
+.shb-calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.shb-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #475569;
+}
+.shb-legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+/* Calendar grid */
+.shb-cal-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    margin-bottom: 1px;
+}
+.shb-cal-day-name {
+    background: #f1f5f9;
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    border-radius: 4px 4px 0 0;
+}
+.shb-cal-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: #e2e8f0;
+    border: 1px solid #e2e8f0;
+    border-radius: 0 0 8px 8px;
+}
+.shb-cal-cell {
+    background: #fff;
+    min-height: 90px;
+    padding: 6px;
+    position: relative;
+}
+.shb-cal-cell.shb-cal-empty {
+    background: #f8fafc;
+}
+.shb-cal-cell.shb-cal-today {
+    background: #f0f9ff;
+}
+.shb-cal-date {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+.shb-cal-today .shb-cal-date {
+    background: #2563eb;
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 12px;
+}
+/* Calendar events */
+.shb-cal-events {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.shb-cal-event {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: default;
+    opacity: 0.85;
+    min-height: 16px;
+}
+.shb-cal-event:hover {
+    opacity: 1;
+}
+.shb-cal-status-cancelled {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+.shb-cal-more {
+    font-size: 10px;
+    color: #64748b;
+    padding: 1px 4px;
+}
+/* Copy button */
+.shb-copy-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.shb-copy-btn {
+    background: none;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    color: #64748b;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.shb-copy-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+    border-color: #94a3b8;
+}
+.shb-copy-btn.copied {
+    color: #16a34a;
+    border-color: #16a34a;
+}
