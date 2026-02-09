@@ -2,7 +2,7 @@
  * Sanctuary Hotel Booking - Public JavaScript v1.1
  */
 
-(function($) {
+(function ($) {
     'use strict';
 
     // Date pickers
@@ -11,14 +11,14 @@
         var tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        $('.shb-datepicker').each(function() {
+        $('.shb-datepicker').each(function () {
             var $input = $(this);
             $input.datepicker({
                 dateFormat: 'yy-mm-dd',
                 minDate: today,
                 showOtherMonths: true,
                 selectOtherMonths: true,
-                onSelect: function() {
+                onSelect: function () {
                     $(this).trigger('change');
                 }
             });
@@ -30,7 +30,7 @@
         var $form = $('#shb-search-form');
         if (!$form.length) return;
 
-        $form.on('submit', function(e) {
+        $form.on('submit', function (e) {
             e.preventDefault();
 
             var checkIn = $('#shb-check-in').val();
@@ -60,7 +60,7 @@
                     check_out: checkOut,
                     guests: guests
                 },
-                success: function(response) {
+                success: function (response) {
                     $('#shb-search-loading').hide();
                     if (response.success && response.data.rooms.length > 0) {
                         var rooms = response.data.rooms;
@@ -74,7 +74,7 @@
                         $('#shb-no-results').fadeIn(300);
                     }
                 },
-                error: function() {
+                error: function () {
                     $('#shb-search-loading').hide();
                     alert('Something went wrong. Please try again.');
                 }
@@ -124,21 +124,21 @@
 
         return '<div class="shb-room-card" data-room-id="' + room.id + '">' +
             '<div class="shb-room-image">' +
-                '<img src="' + room.image + '" alt="' + room.name + '" loading="lazy">' +
-                '<span class="shb-room-type-badge">' + room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1) + '</span>' +
-                '<div class="shb-room-price-tag"><span class="shb-price-amount">' + currency + parseFloat(price).toFixed(0) + '</span><span class="shb-price-unit">' + priceLabel + '</span></div>' +
+            '<img src="' + room.image + '" alt="' + room.name + '" loading="lazy">' +
+            '<span class="shb-room-type-badge">' + room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1) + '</span>' +
+            '<div class="shb-room-price-tag"><span class="shb-price-amount">' + currency + parseFloat(price).toFixed(0) + '</span><span class="shb-price-unit">' + priceLabel + '</span></div>' +
             '</div>' +
             '<div class="shb-room-content">' +
-                '<h3 class="shb-room-title">' + room.name + '</h3>' +
-                specs +
-                amenities +
-                '<p class="shb-room-excerpt">' + desc + '</p>' +
-                '<div class="shb-room-actions">' +
-                    '<a href="' + room.permalink + '" class="shb-button shb-button-outline">Details</a>' +
-                    '<a href="' + bookUrl + '" class="shb-button shb-button-primary">Book Now</a>' +
-                '</div>' +
+            '<h3 class="shb-room-title">' + room.name + '</h3>' +
+            specs +
+            amenities +
+            '<p class="shb-room-excerpt">' + desc + '</p>' +
+            '<div class="shb-room-actions">' +
+            '<a href="' + room.permalink + '" class="shb-button shb-button-outline">Details</a>' +
+            '<a href="' + bookUrl + '" class="shb-button shb-button-primary">Book Now</a>' +
             '</div>' +
-        '</div>';
+            '</div>' +
+            '</div>';
     }
 
     // Update price breakdown in booking form
@@ -163,7 +163,7 @@
                 check_in: checkIn,
                 check_out: checkOut
             },
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
                     var d = response.data;
                     var currency = shb_ajax.currency_symbol;
@@ -190,7 +190,7 @@
         if (!$form.length) return;
 
         // Update price when dates change
-        $form.find('.shb-datepicker').on('change', function() {
+        $form.find('.shb-datepicker').on('change', function () {
             updatePriceBreakdown();
         });
 
@@ -199,7 +199,7 @@
             updatePriceBreakdown();
         }
 
-        $form.on('submit', function(e) {
+        $form.on('submit', function (e) {
             e.preventDefault();
 
             var $btn = $('#shb-submit-booking');
@@ -209,11 +209,20 @@
                 url: shb_ajax.ajax_url,
                 type: 'POST',
                 data: $form.serialize() + '&action=shb_create_booking&nonce=' + shb_ajax.nonce,
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
                         if (response.data.redirect) {
+                            // Stripe/PayPal - redirect to payment checkout
                             window.location.href = response.data.redirect;
+                        } else if (response.data.payment_method === 'bank_transfer') {
+                            // Bank transfer - redirect to confirmation with bank details
+                            var confUrl = shb_ajax.confirmation_url || '?';
+                            var sep = confUrl.indexOf('?') > -1 ? '&' : '?';
+                            var params = 'booking_ref=' + response.data.booking_ref;
+                            params += '&payment_method=bank_transfer';
+                            window.location.href = confUrl + sep + params;
                         } else if (response.data.booking_ref) {
+                            // Other payment methods - go to confirmation
                             var confUrl = shb_ajax.confirmation_url || '?';
                             var sep = confUrl.indexOf('?') > -1 ? '&' : '?';
                             window.location.href = confUrl + sep + 'booking_ref=' + response.data.booking_ref;
@@ -223,7 +232,7 @@
                         $btn.prop('disabled', false).text('Proceed to Payment');
                     }
                 },
-                error: function() {
+                error: function () {
                     alert('Something went wrong. Please try again.');
                     $btn.prop('disabled', false).text('Proceed to Payment');
                 }
@@ -232,7 +241,7 @@
     }
 
     // Init everything
-    $(document).ready(function() {
+    $(document).ready(function () {
         initDatePickers();
         initRoomSearch();
         initBookingForm();

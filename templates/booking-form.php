@@ -94,6 +94,16 @@
                                 </span>
                             </label>
                         <?php endif; ?>
+                        
+                        <?php if (get_option('shb_bank_transfer_enabled', '0') === '1') : ?>
+                            <label class="shb-payment-option">
+                                <input type="radio" name="payment_method" value="bank_transfer">
+                                <span class="shb-payment-label">
+                                    <strong><?php _e('Bank Transfer', 'sanctuary-hotel-booking'); ?></strong>
+                                    <small><?php _e('Pay via bank transfer - booking confirmed after payment received', 'sanctuary-hotel-booking'); ?></small>
+                                </span>
+                            </label>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
