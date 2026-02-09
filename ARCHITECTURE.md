@@ -1,6 +1,18 @@
 # Sanctuary Hotel Booking Plugin - Architecture Guide
 
+> ⚠️ **AI AGENTS**: Before modifying code, read [`AGENTS.md`](./AGENTS.md) for documentation update requirements.
+
 This document provides a comprehensive overview of the plugin architecture to help developers and LLMs understand how the codebase works.
+
+## 📚 Documentation Index
+
+| File | Purpose | When to Read |
+|------|---------|--------------|
+| `AGENTS.md` | Documentation update rules | Before making ANY changes |
+| `ARCHITECTURE.md` | Full architecture guide | Understanding the system |
+| `PROJECT_STRUCTURE.md` | File tree & quick reference | Finding the right file |
+| `SKELETON.md` | Function signatures only | Calling functions |
+| `*/README.md` | Module-specific docs | Working in specific directory |
 
 ## 📁 Directory Structure
 

@@ -1,0 +1,61 @@
+# AI Ignore File
+# Similar to .gitignore - tells AI tools which files/folders to skip indexing
+
+# Build artifacts
+/node_modules/
+/vendor/
+/dist/
+/build/
+
+# Package files
+*.zip
+*.tar.gz
+
+# Logs
+*.log
+/logs/
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large assets (images, fonts)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Minified files (use source instead)
+*.min.js
+*.min.css
+
+# Lock files
+package-lock.json
+composer.lock
+
+# Test artifacts
+/coverage/
+/.phpunit.cache/
+
+# WordPress core (if present)
+/wp-admin/
+/wp-includes/
+/wp-content/plugins/*/  # Other plugins
+/wp-content/themes/*/   # Themes
+
+# Translations (binary)
+*.mo
+
+# Documentation build
+/docs/_build/
