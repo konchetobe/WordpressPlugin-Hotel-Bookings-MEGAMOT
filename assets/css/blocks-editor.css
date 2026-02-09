@@ -1,0 +1,155 @@
+/**
+ * Sanctuary Hotel Booking - Block Editor Styles
+ * Styles for Gutenberg block previews in the editor
+ */
+
+/* Block placeholder styling */
+.wp-block[data-type^="sanctuary-hotel-booking/"] .components-placeholder {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    min-height: 120px;
+}
+
+.wp-block[data-type^="sanctuary-hotel-booking/"] .components-placeholder__label {
+    color: #4a7c59;
+    font-weight: 600;
+}
+
+.wp-block[data-type^="sanctuary-hotel-booking/"] .components-placeholder__instructions {
+    color: #6c757d;
+    font-size: 13px;
+}
+
+/* Block preview container */
+.shb-block-preview {
+    background: #fff;
+    border-radius: 6px;
+    padding: 15px;
+    margin-top: 10px;
+    border: 1px dashed #ced4da;
+}
+
+.shb-block-preview-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.shb-preview-field {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #495057;
+}
+
+.shb-preview-button {
+    background: #4a7c59;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Room list preview */
+.shb-room-list-preview .shb-preview-info {
+    font-size: 12px;
+    color: #6c757d;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.shb-preview-room-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    padding: 20px 15px;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 13px;
+    color: #495057;
+}
+
+/* Confirmation preview */
+.shb-confirmation-preview .shb-preview-success {
+    background: #d4edda;
+    color: #155724;
+    padding: 12px;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+.shb-confirmation-preview .shb-preview-details {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.shb-confirmation-preview .shb-preview-details span {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+/* My bookings preview table */
+.shb-my-bookings-preview .shb-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.shb-my-bookings-preview .shb-preview-table th,
+.shb-my-bookings-preview .shb-preview-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.shb-my-bookings-preview .shb-preview-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+.shb-my-bookings-preview .shb-preview-table td {
+    color: #6c757d;
+}
+
+/* Block icon colors */
+.wp-block[data-type="sanctuary-hotel-booking/room-search"] .components-placeholder__icon {
+    color: #4a7c59;
+}
+
+.wp-block[data-type="sanctuary-hotel-booking/room-list"] .components-placeholder__icon {
+    color: #d4a574;
+}
+
+.wp-block[data-type="sanctuary-hotel-booking/booking-form"] .components-placeholder__icon {
+    color: #4a7c59;
+}
+
+.wp-block[data-type="sanctuary-hotel-booking/booking-confirmation"] .components-placeholder__icon {
+    color: #28a745;
+}
+
+.wp-block[data-type="sanctuary-hotel-booking/my-bookings"] .components-placeholder__icon {
+    color: #6c757d;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .shb-block-preview-fields {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .shb-preview-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
