@@ -1,4 +1,4 @@
-<div class="shb-booking-form-wrap" data-testid="shb-booking-form">
+<div class="shb-booking-form-wrap" data-testid="shb-booking-form" data-room-id="<?php echo esc_attr($room_id); ?>" data-blocked-dates="<?php echo esc_attr(json_encode($blocked_dates)); ?>">
     <div class="shb-booking-grid">
         <!-- Booking Form -->
         <div class="shb-booking-form-section">

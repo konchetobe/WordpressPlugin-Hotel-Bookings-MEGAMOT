@@ -6,6 +6,7 @@
     'use strict';
 
     // Date pickers
+    // Date pickers
     function initDatePickers() {
         var today = new Date();
         var tomorrow = new Date(today);
@@ -13,11 +14,38 @@
 
         $('.shb-datepicker').each(function () {
             var $input = $(this);
+            var $formWrap = $input.closest('.shb-booking-form-wrap');
+            var blockedDates = [];
+
+            // Get blocked dates from data attribute if available
+            if ($formWrap.length) {
+                var blockedData = $formWrap.data('blocked-dates');
+                if (blockedData) {
+                    blockedDates = blockedData; // jQuery parses JSON automatically
+                }
+            }
+
             $input.datepicker({
                 dateFormat: 'yy-mm-dd',
                 minDate: today,
                 showOtherMonths: true,
                 selectOtherMonths: true,
+                beforeShowDay: function (date) {
+                    // If no blocked dates or not in booking form, allow all (except minDate handled by datepicker)
+                    if (blockedDates.length === 0) {
+                        return [true, '', ''];
+                    }
+
+                    var stringDate = $.datepicker.formatDate('yy-mm-dd', date);
+                    for (var i = 0; i < blockedDates.length; i++) {
+                        var range = blockedDates[i];
+                        if (stringDate >= range.start && stringDate <= range.end) {
+                            var title = range.type === 'blocked' ? (range.reason || 'Unavailable') : 'Booked';
+                            return [false, 'shb-date-blocked', title];
+                        }
+                    }
+                    return [true, '', ''];
+                },
                 onSelect: function () {
                     $(this).trigger('change');
                 }

@@ -31,6 +31,9 @@ class SHB_Ajax
         add_action('wp_ajax_shb_download_calendar', array(__CLASS__, 'download_calendar'));
         add_action('wp_ajax_nopriv_shb_download_calendar', array(__CLASS__, 'download_calendar'));
 
+        add_action('wp_ajax_shb_get_blocked_dates', array(__CLASS__, 'get_blocked_dates'));
+        add_action('wp_ajax_nopriv_shb_get_blocked_dates', array(__CLASS__, 'get_blocked_dates'));
+
         // Admin AJAX actions
         add_action('wp_ajax_shb_admin_update_booking_status', array(__CLASS__, 'admin_update_booking_status'));
         add_action('wp_ajax_shb_admin_get_dashboard_stats', array(__CLASS__, 'admin_get_dashboard_stats'));
@@ -211,6 +214,48 @@ class SHB_Ajax
         }
 
         SHB_Calendar::download_ics($booking_id);
+    }
+
+    /**
+     * Get blocked dates for a room (for frontend date picker)
+     * Returns both availability blocks and existing bookings
+     */
+    public static function get_blocked_dates()
+    {
+        check_ajax_referer('shb_nonce', 'nonce');
+
+        $room_id = intval($_POST['room_id']);
+
+        if (!$room_id) {
+            wp_send_json_error(array('message' => __('Room ID required', 'sanctuary-hotel-booking')));
+        }
+
+        $blocked_dates = array();
+
+        // Get availability blocks
+        $blocks = SHB_Availability::get_availability_blocks($room_id);
+        foreach ($blocks as $block) {
+            $blocked_dates[] = array(
+                'start' => $block['start_date'],
+                'end' => $block['end_date'],
+                'type' => 'blocked',
+                'reason' => $block['reason']
+            );
+        }
+
+        // Get existing bookings (non-cancelled)
+        $bookings = SHB_Booking::get_bookings_by_room($room_id);
+        foreach ($bookings as $booking) {
+            if ($booking['booking_status'] !== 'cancelled') {
+                $blocked_dates[] = array(
+                    'start' => $booking['check_in'],
+                    'end' => $booking['check_out'],
+                    'type' => 'booked'
+                );
+            }
+        }
+
+        wp_send_json_success(array('blocked_dates' => $blocked_dates));
     }
 
     /**

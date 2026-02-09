@@ -1234,3 +1234,78 @@
         font-size: 16px;
     }
 }
+
+/* ==============================
+   Datepicker Customization
+   ============================== */
+.ui-datepicker.ui-widget {
+    font-family: inherit;
+    border: 1px solid var(--shb-border);
+    border-radius: var(--shb-radius);
+    padding: 8px;
+    box-shadow: var(--shb-shadow-lg);
+    background: #fff;
+    z-index: 10000 !important;
+}
+
+.ui-datepicker .ui-datepicker-header {
+    background: #fff;
+    border: none;
+    padding: 6px;
+}
+
+.ui-datepicker .ui-datepicker-title {
+    font-weight: 600;
+    color: var(--shb-text);
+}
+
+.ui-datepicker th {
+    font-weight: normal;
+    color: var(--shb-text-light);
+    font-size: 12px;
+}
+
+.ui-datepicker td span,
+.ui-datepicker td a {
+    text-align: center;
+    border-radius: 4px;
+    padding: 6px;
+}
+
+.ui-state-default,
+.ui-widget-content .ui-state-default {
+    border: none;
+    background: var(--shb-bg);
+    color: var(--shb-text);
+}
+
+.ui-state-highlight,
+.ui-widget-content .ui-state-highlight {
+    background: #fef9c3;
+    color: var(--shb-warning);
+    font-weight: 600;
+}
+
+.ui-state-active,
+.ui-widget-content .ui-state-active {
+    background: var(--shb-primary);
+    color: #fff;
+}
+
+/* Blocked Dates */
+.shb-date-blocked span,
+.shb-date-blocked a {
+    background: repeating-linear-gradient(45deg,
+            #fee2e2,
+            #fee2e2 5px,
+            #fecaca 5px,
+            #fecaca 10px) !important;
+    color: #991b1b !important;
+    cursor: not-allowed !important;
+    opacity: 0.7;
+    text-decoration: line-through;
+}
+
+.shb-date-blocked {
+    pointer-events: none;
+}

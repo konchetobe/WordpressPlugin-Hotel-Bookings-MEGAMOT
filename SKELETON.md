@@ -197,6 +197,7 @@ class SHB_Ajax {
     public static function get_room_prices(): void   // action: shb_get_room_prices
     public static function create_booking(): void    // action: shb_create_booking
     public static function process_payment(): void   // action: shb_process_payment
+    public static function get_blocked_dates(): void // action: shb_get_blocked_dates
     
     // ADMIN ENDPOINTS (requires manage_options)
     public static function admin_get_booking(): void      // action: shb_get_booking
