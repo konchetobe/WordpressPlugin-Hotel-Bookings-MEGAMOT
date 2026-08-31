@@ -60,30 +60,33 @@ class SHB_Availability {
                 'value' => 'cancelled',
                 'compare' => '!=',
             ),
+            array(
+                'key' => '_shb_check_in',
+                'value' => $check_out,
+                'compare' => '<',
+                'type' => 'DATE',
+            ),
+            array(
+                'key' => '_shb_check_out',
+                'value' => $check_in,
+                'compare' => '>',
+                'type' => 'DATE',
+            ),
         );
-        
+
         $bookings = get_posts(array(
             'post_type' => 'shb_booking',
             'post_status' => 'publish',
-            'posts_per_page' => -1,
+            'posts_per_page' => 1,
+            'fields' => 'ids',
+            'no_found_rows' => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
             'meta_query' => $meta_query,
             'exclude' => $exclude_booking_id ? array($exclude_booking_id) : array(),
         ));
-        
-        $check_in_date = new DateTime($check_in);
-        $check_out_date = new DateTime($check_out);
-        
-        foreach ($bookings as $booking) {
-            $booking_check_in = new DateTime(get_post_meta($booking->ID, '_shb_check_in', true));
-            $booking_check_out = new DateTime(get_post_meta($booking->ID, '_shb_check_out', true));
-            
-            // Check for overlap
-            if (!($check_out_date <= $booking_check_in || $check_in_date >= $booking_check_out)) {
-                return true;
-            }
-        }
-        
-        return false;
+
+        return !empty($bookings);
     }
     
     /**

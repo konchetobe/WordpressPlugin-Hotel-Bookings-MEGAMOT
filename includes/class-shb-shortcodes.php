@@ -148,6 +148,7 @@ class SHB_Shortcodes
     {
         $booking_id = isset($_GET['booking_id']) ? intval($_GET['booking_id']) : 0;
         $booking_ref = isset($_GET['booking_ref']) ? sanitize_text_field($_GET['booking_ref']) : '';
+        $booking_token = isset($_GET['booking_token']) ? sanitize_text_field(wp_unslash($_GET['booking_token'])) : '';
 
         if ($booking_ref) {
             $booking = SHB_Booking::get_booking_by_ref($booking_ref);
@@ -158,6 +159,10 @@ class SHB_Shortcodes
         }
 
         if (!$booking) {
+            return '<p class="shb-error">' . __('Booking not found.', 'sanctuary-hotel-booking') . '</p>';
+        }
+
+        if (empty($booking_token) || !hash_equals($booking['calendar_token'], $booking_token)) {
             return '<p class="shb-error">' . __('Booking not found.', 'sanctuary-hotel-booking') . '</p>';
         }
 

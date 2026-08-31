@@ -32,7 +32,18 @@ class SHB_Public {
             $session_id = sanitize_text_field($_GET['session_id']);
             
             if ($booking_id && $session_id) {
-                SHB_Payments::handle_payment_success($booking_id, $session_id);
+                $result = SHB_Payments::handle_payment_success($booking_id, $session_id);
+
+                if ($result === true) {
+                    $booking = SHB_Booking::get_booking($booking_id);
+                    $url = add_query_arg(
+                        'booking_token',
+                        $booking['calendar_token'],
+                        Sanctuary_Hotel_Booking::get_confirmation_url($booking['booking_ref'])
+                    );
+                    wp_safe_redirect($url);
+                    exit;
+                }
             }
         }
     }
@@ -45,9 +56,18 @@ class SHB_Public {
             return;
         }
         
-        $booking_id = intval($_GET['shb_download_calendar']);
-        if ($booking_id) {
-            SHB_Calendar::download_ics($booking_id);
+        $booking_id = absint($_GET['shb_download_calendar']);
+        $token = sanitize_text_field(wp_unslash($_GET['shb_calendar_token'] ?? ''));
+        $booking = SHB_Booking::get_booking($booking_id);
+
+        if (!$booking || empty($token) || !hash_equals($booking['calendar_token'], $token)) {
+            wp_die(
+                esc_html__('You do not have permission to download this calendar event.', 'sanctuary-hotel-booking'),
+                esc_html__('Access denied', 'sanctuary-hotel-booking'),
+                array('response' => 403)
+            );
         }
+
+        SHB_Calendar::download_ics($booking_id);
     }
 }

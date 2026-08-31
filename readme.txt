@@ -4,7 +4,7 @@ Tags: hotel booking, reservation, accommodation, booking system, hotel managemen
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,11 @@ Yes, go to Hotel Booking > Availability to create date blocks for any room.
 6. Settings page
 
 == Changelog ==
+
+= 1.3.1 =
+* Added GitHub Release automatic updates using the bundled Plugin Update Checker.
+* Optimized availability and pricing lookups and added schema versioning for new indexes.
+* Hardened public booking input, Stripe callback ownership checks, calendar download links, and dynamic search-result rendering.
 
 = 1.0.0 =
 * Initial release

@@ -54,7 +54,7 @@ class SHB_Room {
 class SHB_Booking {
     // Create new booking
     public static function create_booking(array $data): array|WP_Error
-    // Returns: ['booking_id' => int, 'booking_ref' => string, 'total_price' => float]
+    // Returns: ['booking_id' => int, 'booking_ref' => string, 'booking_token' => string, 'total_price' => float]
     
     // Get booking by ID
     public static function get_booking(int $booking_id): ?array
@@ -81,7 +81,7 @@ class SHB_Booking {
 }
 ```
 
-**Booking Data Input:**
+**Booking Creation Input:**
 ```php
 [
     'room_id' => int,
@@ -94,6 +94,16 @@ class SHB_Booking {
     'phone' => string,
     'special_requests' => string,
     'payment_method' => string,
+]
+```
+
+**Creation Result:**
+```php
+[
+    'booking_id' => int,
+    'booking_ref' => string,
+    'booking_token' => string, // Authorizes confirmation and ICS links.
+    'total_price' => float,
 ]
 ```
 
@@ -159,6 +169,31 @@ class SHB_Pricing {
         string $check_out
     ): array
     // Returns: ['nights' => int, 'per_night' => float, 'subtotal' => float, 'total' => float]
+}
+```
+
+---
+
+## SHB_Database (includes/class-shb-database.php)
+
+```php
+class SHB_Database {
+    // Apply schema updates once for each SHB_DB_VERSION
+    public static function maybe_upgrade(): void
+
+    // Create or update plugin-owned tables and indexes
+    public static function create_tables(): void
+}
+```
+
+---
+
+## SHB_Update_Checker (includes/class-shb-update-checker.php)
+
+```php
+class SHB_Update_Checker {
+    // Register GitHub Release update checks in wp-admin and WP-Cron
+    public static function init(): void
 }
 ```
 
@@ -241,7 +276,7 @@ class SHB_Shortcodes {
     // Booking confirmation
     public static function booking_confirmation(array $atts): string
     // Shortcode: [shb_booking_confirmation]
-    // Reads: booking_ref from URL param
+    // Reads: booking_ref and booking_token from URL params
     
     // Customer booking lookup
     public static function my_bookings(array $atts): string

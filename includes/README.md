@@ -16,6 +16,7 @@ This directory contains the core PHP classes that power the plugin.
 | `class-shb-pricing.php` | `SHB_Pricing` | Price calculations |
 | `class-shb-room.php` | `SHB_Room` | Room CRUD operations |
 | `class-shb-shortcodes.php` | `SHB_Shortcodes` | Shortcode handlers |
+| `class-shb-update-checker.php` | `SHB_Update_Checker` | GitHub Release update integration |
 
 ## Class Relationships
 
@@ -44,6 +45,10 @@ SHB_Ajax ───────────────────────�
                                                  │
 Response ◀──────────────────────────────────────┘
 ```
+
+`SHB_Update_Checker` is loaded only for wp-admin and WP-Cron. It registers
+the bundled Plugin Update Checker against GitHub Releases and requires a
+packaged release ZIP.
 
 ## Common Tasks
 

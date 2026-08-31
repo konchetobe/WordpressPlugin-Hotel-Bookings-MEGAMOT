@@ -3,7 +3,7 @@
  * Plugin Name: Sanctuary Hotel Booking
  * Plugin URI: https://example.com/sanctuary-hotel-booking
  * Description: A comprehensive hotel/guest house booking reservation system with Stripe/PayPal payments and calendar event generation.
- * Version: 1.3.0
+ * Version: 1.3.1
  * Author: Sanctuary Hotels
  * Author URI: https://example.com
  * License: GPL v2 or later
@@ -18,10 +18,12 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('SHB_VERSION', '1.3.0');
+define('SHB_VERSION', '1.3.1');
+define('SHB_DB_VERSION', '1.3.1');
 define('SHB_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SHB_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('SHB_PLUGIN_BASENAME', plugin_basename(__FILE__));
+define('SHB_PLUGIN_FILE', __FILE__);
 
 /**
  * Main Plugin Class
@@ -59,6 +61,11 @@ class Sanctuary_Hotel_Booking
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-shortcodes.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-ajax.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-blocks.php';
+
+        // The update checker is only needed for wp-admin or scheduled update checks.
+        if (is_admin() || (function_exists('wp_doing_cron') && wp_doing_cron())) {
+            require_once SHB_PLUGIN_DIR . 'includes/class-shb-update-checker.php';
+        }
 
         // Admin includes
         if (is_admin()) {
@@ -123,6 +130,9 @@ class Sanctuary_Hotel_Booking
 
     public function init()
     {
+        // Run schema changes once per plugin version, outside of activation.
+        SHB_Database::maybe_upgrade();
+
         // Initialize shortcodes
         SHB_Shortcodes::init();
 
@@ -139,6 +149,10 @@ class Sanctuary_Hotel_Booking
 
         // Initialize Gutenberg blocks
         SHB_Blocks::init();
+
+        if (class_exists('SHB_Update_Checker')) {
+            SHB_Update_Checker::init();
+        }
     }
 
     public function activate()
@@ -298,6 +312,44 @@ class Sanctuary_Hotel_Booking
 
     public function enqueue_public_assets()
     {
+        $post = get_post();
+        $shortcodes = array(
+            'shb_booking_form',
+            'shb_room_list',
+            'shb_room_search',
+            'shb_booking_confirmation',
+            'shb_my_bookings',
+        );
+        $blocks = array(
+            'sanctuary-hotel-booking/room-search',
+            'sanctuary-hotel-booking/room-list',
+            'sanctuary-hotel-booking/booking-form',
+            'sanctuary-hotel-booking/booking-confirmation',
+            'sanctuary-hotel-booking/my-bookings',
+        );
+        $has_shortcode = false;
+        $has_block = false;
+
+        if ($post instanceof WP_Post) {
+            foreach ($shortcodes as $shortcode) {
+                if (has_shortcode($post->post_content, $shortcode)) {
+                    $has_shortcode = true;
+                    break;
+                }
+            }
+
+            foreach ($blocks as $block) {
+                if (has_block($block, $post)) {
+                    $has_block = true;
+                    break;
+                }
+            }
+        }
+
+        if (!is_singular('shb_room') && !$has_shortcode && !$has_block) {
+            return;
+        }
+
         // CSS
         wp_enqueue_style(
             'shb-public-css',
@@ -307,11 +359,11 @@ class Sanctuary_Hotel_Booking
         );
 
         // Dynamic styles from settings
-        $primary = get_option('shb_primary_color', '#4a7c59');
-        $accent = get_option('shb_accent_color', '#d4a574');
+        $primary = sanitize_hex_color(get_option('shb_primary_color', '#4a7c59')) ?: '#4a7c59';
+        $accent = sanitize_hex_color(get_option('shb_accent_color', '#d4a574')) ?: '#d4a574';
         $card_style = get_option('shb_card_style', 'default');
         $button_style = get_option('shb_button_style', 'rounded');
-        $font_family = get_option('shb_font_family', '');
+        $font_family = preg_replace('/[^a-zA-Z0-9,\s\-\'\"]/', '', get_option('shb_font_family', ''));
         $custom_css = get_option('shb_custom_css', '');
 
         // Darken primary color for hover

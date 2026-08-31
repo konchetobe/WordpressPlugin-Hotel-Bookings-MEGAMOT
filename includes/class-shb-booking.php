@@ -13,9 +13,41 @@ class SHB_Booking {
      * Create a new booking
      */
     public static function create_booking($data) {
+        $data = wp_parse_args($data, array(
+            'room_id' => 0,
+            'check_in' => '',
+            'check_out' => '',
+            'guests' => 0,
+            'first_name' => '',
+            'last_name' => '',
+            'email' => '',
+            'phone' => '',
+        ));
+        $data['room_id'] = absint($data['room_id']);
+        $data['check_in'] = sanitize_text_field($data['check_in']);
+        $data['check_out'] = sanitize_text_field($data['check_out']);
+        $data['guests'] = absint($data['guests']);
+
         $room = SHB_Room::get_room($data['room_id']);
         if (!$room) {
             return new WP_Error('invalid_room', __('Room not found', 'sanctuary-hotel-booking'));
+        }
+
+        if (!$room['is_active']) {
+            return new WP_Error('inactive_room', __('This room is not currently available for booking', 'sanctuary-hotel-booking'));
+        }
+
+        $nights = self::calculate_nights($data['check_in'], $data['check_out']);
+        if ($nights < 1) {
+            return new WP_Error('invalid_dates', __('Please choose valid check-in and check-out dates', 'sanctuary-hotel-booking'));
+        }
+
+        if ($data['guests'] < 1 || $data['guests'] > $room['max_guests']) {
+            return new WP_Error('invalid_guests', __('The guest count is not valid for this room', 'sanctuary-hotel-booking'));
+        }
+
+        if ($nights < $room['min_nights'] || $nights > $room['max_nights']) {
+            return new WP_Error('invalid_stay_length', __('The selected stay does not meet this room\'s night limits', 'sanctuary-hotel-booking'));
         }
         
         // Check availability
@@ -76,10 +108,13 @@ class SHB_Booking {
         // Generate unique booking reference
         $booking_ref = 'SHB-' . strtoupper(substr(md5($booking_id . time()), 0, 8));
         update_post_meta($booking_id, '_shb_booking_ref', $booking_ref);
+        $booking_token = wp_generate_password(32, false, false);
+        update_post_meta($booking_id, '_shb_calendar_token', $booking_token);
         
         return array(
             'booking_id' => $booking_id,
             'booking_ref' => $booking_ref,
+            'booking_token' => $booking_token,
             'total_price' => $total_price,
         );
     }
@@ -119,6 +154,13 @@ class SHB_Booking {
      */
     public static function format_booking($post) {
         $booking_id = is_object($post) ? $post->ID : $post;
+        $calendar_token = get_post_meta($booking_id, '_shb_calendar_token', true);
+
+        // Add secure calendar links to legacy bookings on their first read.
+        if (empty($calendar_token)) {
+            $calendar_token = wp_generate_password(32, false, false);
+            update_post_meta($booking_id, '_shb_calendar_token', $calendar_token);
+        }
         
         return array(
             'id' => $booking_id,
@@ -139,6 +181,7 @@ class SHB_Booking {
             'booking_status' => get_post_meta($booking_id, '_shb_booking_status', true),
             'booking_date' => get_post_meta($booking_id, '_shb_booking_date', true),
             'stripe_session_id' => get_post_meta($booking_id, '_shb_stripe_session_id', true),
+            'calendar_token' => $calendar_token,
         );
     }
     
@@ -379,8 +422,19 @@ class SHB_Booking {
      * Calculate nights between dates
      */
     public static function calculate_nights($check_in, $check_out) {
-        $date1 = new DateTime($check_in);
-        $date2 = new DateTime($check_out);
+        $date1 = DateTimeImmutable::createFromFormat('!Y-m-d', $check_in);
+        $date2 = DateTimeImmutable::createFromFormat('!Y-m-d', $check_out);
+
+        if (
+            !$date1 ||
+            !$date2 ||
+            $date1->format('Y-m-d') !== $check_in ||
+            $date2->format('Y-m-d') !== $check_out ||
+            $date2 <= $date1
+        ) {
+            return 0;
+        }
+
         $interval = $date1->diff($date2);
         return $interval->days;
     }

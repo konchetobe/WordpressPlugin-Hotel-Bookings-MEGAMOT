@@ -12,6 +12,10 @@ This directory contains PHP template files for frontend display.
 | `room-search.php` | `[shb_room_search]` | - |
 | `my-bookings.php` | `[shb_my_bookings]` | `$bookings` |
 
+`$booking` and each item in `$bookings` include `calendar_token`. Confirmation
+pages require it as `booking_token`; calendar download links must send it as
+`shb_calendar_token`. Do not expose ID-only or reference-only booking URLs.
+
 ## Template Loading
 
 Templates are loaded by shortcode handlers in `SHB_Shortcodes`:

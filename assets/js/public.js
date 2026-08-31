@@ -5,6 +5,32 @@
 (function ($) {
     'use strict';
 
+    /**
+     * Escape strings before inserting plugin data into generated markup.
+     * Room titles, amenities, and descriptions are editable in wp-admin and
+     * must not be interpreted as HTML in public search results.
+     */
+    function escapeHtml(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    /**
+     * Limit generated links and images to HTTP(S) URLs.
+     */
+    function safeUrl(value) {
+        try {
+            var url = new URL(String(value || ''), window.location.origin);
+            return /^(https?):$/.test(url.protocol) ? url.href : '#';
+        } catch (error) {
+            return '#';
+        }
+    }
+
     // Date pickers
     // Date pickers
     function initDatePickers() {
@@ -112,12 +138,16 @@
 
     // Render a single room card
     function renderRoomCard(room, checkIn, checkOut) {
-        var currency = shb_ajax.currency_symbol;
+        var currency = escapeHtml(shb_ajax.currency_symbol);
         var price = room.calculated_price ? room.calculated_price.total : room.base_price;
         var priceLabel = room.calculated_price ? '/total' : '/night';
-        var bedLabel = room.bed_type ? room.bed_type.charAt(0).toUpperCase() + room.bed_type.slice(1) : '';
+        var bedLabel = room.bed_type ? escapeHtml(room.bed_type.charAt(0).toUpperCase() + room.bed_type.slice(1)) : '';
         var desc = room.description ? room.description.substring(0, 80) : '';
         if (desc.length >= 80) desc += '...';
+        var roomName = escapeHtml(room.name);
+        var roomType = escapeHtml(room.room_type || '');
+        var roomImage = safeUrl(room.image);
+        var roomPermalink = safeUrl(room.permalink);
 
         // Build specs
         var specs = '<div class="shb-room-specs">';
@@ -136,7 +166,7 @@
             amenities = '<div class="shb-room-amenities-strip">';
             var show = Math.min(room.amenities.length, 3);
             for (var i = 0; i < show; i++) {
-                amenities += '<span class="shb-amenity-tag">' + room.amenities[i] + '</span>';
+                amenities += '<span class="shb-amenity-tag">' + escapeHtml(room.amenities[i]) + '</span>';
             }
             if (room.amenities.length > 3) {
                 amenities += '<span class="shb-amenity-more">+' + (room.amenities.length - 3) + '</span>';
@@ -144,26 +174,26 @@
             amenities += '</div>';
         }
 
-        var bookUrl = shb_ajax.booking_url || room.permalink;
+        var bookUrl = safeUrl(shb_ajax.booking_url || room.permalink);
         var sep = bookUrl.indexOf('?') > -1 ? '&' : '?';
-        bookUrl += sep + 'room_id=' + room.id;
-        if (checkIn) bookUrl += '&check_in=' + checkIn;
-        if (checkOut) bookUrl += '&check_out=' + checkOut;
+        bookUrl += sep + 'room_id=' + encodeURIComponent(room.id || '');
+        if (checkIn) bookUrl += '&check_in=' + encodeURIComponent(checkIn);
+        if (checkOut) bookUrl += '&check_out=' + encodeURIComponent(checkOut);
 
-        return '<div class="shb-room-card" data-room-id="' + room.id + '">' +
+        return '<div class="shb-room-card" data-room-id="' + escapeHtml(room.id || '') + '">' +
             '<div class="shb-room-image">' +
-            '<img src="' + room.image + '" alt="' + room.name + '" loading="lazy">' +
-            '<span class="shb-room-type-badge">' + room.room_type.charAt(0).toUpperCase() + room.room_type.slice(1) + '</span>' +
+            '<img src="' + escapeHtml(roomImage) + '" alt="' + roomName + '" loading="lazy">' +
+            '<span class="shb-room-type-badge">' + roomType + '</span>' +
             '<div class="shb-room-price-tag"><span class="shb-price-amount">' + currency + parseFloat(price).toFixed(0) + '</span><span class="shb-price-unit">' + priceLabel + '</span></div>' +
             '</div>' +
             '<div class="shb-room-content">' +
-            '<h3 class="shb-room-title">' + room.name + '</h3>' +
+            '<h3 class="shb-room-title">' + roomName + '</h3>' +
             specs +
             amenities +
-            '<p class="shb-room-excerpt">' + desc + '</p>' +
+            '<p class="shb-room-excerpt">' + escapeHtml(desc) + '</p>' +
             '<div class="shb-room-actions">' +
-            '<a href="' + room.permalink + '" class="shb-button shb-button-outline">Details</a>' +
-            '<a href="' + bookUrl + '" class="shb-button shb-button-primary">Book Now</a>' +
+            '<a href="' + escapeHtml(roomPermalink) + '" class="shb-button shb-button-outline">Details</a>' +
+            '<a href="' + escapeHtml(bookUrl) + '" class="shb-button shb-button-primary">Book Now</a>' +
             '</div>' +
             '</div>' +
             '</div>';
@@ -246,14 +276,15 @@
                             // Bank transfer - redirect to confirmation with bank details
                             var confUrl = shb_ajax.confirmation_url || '?';
                             var sep = confUrl.indexOf('?') > -1 ? '&' : '?';
-                            var params = 'booking_ref=' + response.data.booking_ref;
+                            var params = 'booking_ref=' + encodeURIComponent(response.data.booking_ref);
+                            params += '&booking_token=' + encodeURIComponent(response.data.booking_token);
                             params += '&payment_method=bank_transfer';
                             window.location.href = confUrl + sep + params;
                         } else if (response.data.booking_ref) {
                             // Other payment methods - go to confirmation
                             var confUrl = shb_ajax.confirmation_url || '?';
                             var sep = confUrl.indexOf('?') > -1 ? '&' : '?';
-                            window.location.href = confUrl + sep + 'booking_ref=' + response.data.booking_ref;
+                            window.location.href = confUrl + sep + 'booking_ref=' + encodeURIComponent(response.data.booking_ref) + '&booking_token=' + encodeURIComponent(response.data.booking_token);
                         }
                     } else {
                         alert(response.data.message || 'Booking failed. Please try again.');

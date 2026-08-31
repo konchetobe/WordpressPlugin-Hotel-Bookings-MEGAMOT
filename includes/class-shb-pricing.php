@@ -8,6 +8,14 @@ if (!defined('ABSPATH')) {
 }
 
 class SHB_Pricing {
+
+    /**
+     * Active rules are immutable for the duration of a request unless this
+     * class changes one of them.
+     *
+     * @var array|null
+     */
+    private static $active_rules = null;
     
     /**
      * Calculate total price for a booking
@@ -40,10 +48,14 @@ class SHB_Pricing {
         global $wpdb;
         $table = $wpdb->prefix . 'shb_pricing_rules';
         
-        $rules = $wpdb->get_results(
-            "SELECT * FROM $table WHERE is_active = 1",
-            ARRAY_A
-        );
+        if (null === self::$active_rules) {
+            self::$active_rules = $wpdb->get_results(
+                "SELECT * FROM $table WHERE is_active = 1",
+                ARRAY_A
+            );
+        }
+
+        $rules = self::$active_rules;
         
         $multiplier = 1.0;
         $check_in_date = new DateTime($check_in);
@@ -116,6 +128,8 @@ class SHB_Pricing {
             return new WP_Error('db_error', __('Failed to create pricing rule', 'sanctuary-hotel-booking'));
         }
         
+        self::$active_rules = null;
+
         return $wpdb->insert_id;
     }
     
@@ -152,6 +166,10 @@ class SHB_Pricing {
         
         $result = $wpdb->update($table, $update_data, array('id' => $rule_id));
         
+        if ($result !== false) {
+            self::$active_rules = null;
+        }
+
         return $result !== false;
     }
     
@@ -162,7 +180,13 @@ class SHB_Pricing {
         global $wpdb;
         $table = $wpdb->prefix . 'shb_pricing_rules';
         
-        return $wpdb->delete($table, array('id' => $rule_id));
+        $result = $wpdb->delete($table, array('id' => $rule_id));
+
+        if ($result !== false) {
+            self::$active_rules = null;
+        }
+
+        return $result;
     }
     
     /**

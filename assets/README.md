@@ -51,6 +51,9 @@ $(document).ready(function() {
 });
 ```
 
+`public.js` escapes room fields and limits dynamically generated image/link
+URLs to HTTP(S) before adding AJAX search results to the page.
+
 ### AJAX Pattern
 ```javascript
 $.ajax({

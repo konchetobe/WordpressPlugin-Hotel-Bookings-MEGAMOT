@@ -5,6 +5,7 @@ sanctuary-hotel-booking/
 ├── sanctuary-hotel-booking.php   # Main plugin entry point
 ├── CLAUDE.md                     # AI architecture guide
 ├── SKELETON.md                   # Function signatures (interfaces only)
+├── MULTI_LOCATION_PLAN.md         # Phased multiple-location/room implementation plan
 ├── .aiignore                     # Files AI should skip
 │
 ├── includes/                     # Core PHP classes
@@ -18,7 +19,11 @@ sanctuary-hotel-booking/
 │   ├── class-shb-payments.php    # Payment processing
 │   ├── class-shb-pricing.php     # Price calculations
 │   ├── class-shb-room.php        # Room CRUD
-│   └── class-shb-shortcodes.php  # Shortcode handlers
+│   ├── class-shb-shortcodes.php  # Shortcode handlers
+│   └── class-shb-update-checker.php # GitHub Release update integration
+│
+├── lib/
+│   └── plugin-update-checker/     # Bundled GitHub Release updater dependency
 │
 ├── admin/                        # Admin-only code
 │   ├── README.md                 # Module documentation

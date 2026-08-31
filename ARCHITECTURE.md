@@ -12,6 +12,7 @@ This document provides a comprehensive overview of the plugin architecture to he
 | `ARCHITECTURE.md` | Full architecture guide | Understanding the system |
 | `PROJECT_STRUCTURE.md` | File tree & quick reference | Finding the right file |
 | `SKELETON.md` | Function signatures only | Calling functions |
+| `MULTI_LOCATION_PLAN.md` | Phased multiple-location design | Planning the location feature |
 | `*/README.md` | Module-specific docs | Working in specific directory |
 
 ## 📁 Directory Structure
@@ -37,6 +38,8 @@ sanctuary-hotel-booking/
 │   └── js/                       # JavaScript
 │       ├── admin.js              # Admin functionality
 │       └── public.js             # Frontend functionality
+├── lib/
+│   └── plugin-update-checker/    # Bundled GitHub Release updater dependency
 └── blocks/                       # Gutenberg blocks
 ```
 
@@ -52,6 +55,7 @@ sanctuary-hotel-booking/
 | `SHB_Booking` | `includes/class-shb-booking.php` | Booking CRUD, custom post type `shb_booking` |
 | `SHB_Availability` | `includes/class-shb-availability.php` | Room availability checks, availability blocks |
 | `SHB_Pricing` | `includes/class-shb-pricing.php` | Price calculations, seasonal pricing |
+| `SHB_Database` | `includes/class-shb-database.php` | Plugin table schema and versioned upgrades |
 
 ### Payment Processing
 | Class | File | Purpose |
@@ -71,6 +75,7 @@ sanctuary-hotel-booking/
 | `SHB_Ajax` | `includes/class-shb-ajax.php` | All AJAX endpoint handlers |
 | `SHB_Admin` | `admin/class-shb-admin.php` | Admin menus, dashboard |
 | `SHB_Admin_Settings` | `admin/class-shb-admin-settings.php` | Plugin settings |
+| `SHB_Update_Checker` | `includes/class-shb-update-checker.php` | GitHub Release auto-updates in wp-admin/WP-Cron |
 
 ---
 
@@ -112,6 +117,7 @@ Stores reservation data.
 | `_shb_booking_status` | string | pending, confirmed, cancelled, checked_in, checked_out |
 | `_shb_booking_date` | datetime | When booking was created |
 | `_shb_stripe_session_id` | string | Stripe checkout session ID |
+| `_shb_calendar_token` | string | Secret token required to view confirmation or download the booking ICS file |
 
 ### `shb_availability` (Availability Blocks)
 Manual availability blocks (closures, maintenance, etc.)
@@ -206,7 +212,7 @@ $.ajax({
 1. User fills booking form → selects "Bank Transfer"
 2. Frontend JS → AJAX: shb_create_booking
 3. Backend creates booking (status: pending)
-4. Returns bank details + booking_ref
+4. Returns bank details + booking_ref + booking_token
 5. Frontend redirects to confirmation page
 6. Confirmation page shows:
    - Bank account details (from settings)

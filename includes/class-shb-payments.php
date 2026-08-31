@@ -110,7 +110,7 @@ class SHB_Payments {
             return new WP_Error('no_api_key', __('Stripe API key not configured', 'sanctuary-hotel-booking'));
         }
         
-        $response = wp_remote_get('https://api.stripe.com/v1/checkout/sessions/' . $session_id, array(
+        $response = wp_remote_get('https://api.stripe.com/v1/checkout/sessions/' . rawurlencode($session_id), array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . $secret_key,
             ),
@@ -137,6 +137,17 @@ class SHB_Payments {
      * Handle successful payment
      */
     public static function handle_payment_success($booking_id, $session_id) {
+        $booking_id = absint($booking_id);
+        $booking = SHB_Booking::get_booking($booking_id);
+
+        if (!$booking) {
+            return new WP_Error('invalid_booking', __('Booking not found', 'sanctuary-hotel-booking'));
+        }
+
+        if (empty($booking['stripe_session_id']) || !hash_equals($booking['stripe_session_id'], $session_id)) {
+            return new WP_Error('invalid_session', __('Payment session does not belong to this booking', 'sanctuary-hotel-booking'));
+        }
+
         // Verify payment with Stripe
         $verification = self::verify_stripe_payment($session_id);
         
@@ -144,7 +155,16 @@ class SHB_Payments {
             return $verification;
         }
         
+        if ((int) $verification['booking_id'] !== $booking_id) {
+            return new WP_Error('session_mismatch', __('Payment session metadata does not match this booking', 'sanctuary-hotel-booking'));
+        }
+
         if ($verification['payment_status'] === 'paid') {
+            if ($booking['payment_status'] === 'paid') {
+                self::update_payment_transaction($session_id, 'paid');
+                return true;
+            }
+
             // Update booking payment status
             SHB_Booking::update_payment_status($booking_id, 'paid');
             

@@ -139,7 +139,7 @@
     <?php endif; ?>
 
     <div class="shb-confirmation-actions">
-        <a href="<?php echo esc_url(add_query_arg('shb_download_calendar', $booking['id'], home_url())); ?>"
+        <a href="<?php echo esc_url(add_query_arg(array('shb_download_calendar' => $booking['id'], 'shb_calendar_token' => $booking['calendar_token']), home_url())); ?>"
             class="shb-button shb-button-outline" data-testid="download-calendar-btn">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2">

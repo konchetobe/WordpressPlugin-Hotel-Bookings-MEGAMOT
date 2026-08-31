@@ -8,6 +8,17 @@ if (!defined('ABSPATH')) {
 }
 
 class SHB_Database {
+
+    /**
+     * Apply schema changes when the plugin version changes.
+     */
+    public static function maybe_upgrade() {
+        if (get_option('shb_db_version') === SHB_DB_VERSION) {
+            return;
+        }
+
+        self::create_tables();
+    }
     
     public static function create_tables() {
         global $wpdb;
@@ -26,7 +37,8 @@ class SHB_Database {
             multiplier decimal(5,2) NOT NULL DEFAULT 1.00,
             is_active tinyint(1) NOT NULL DEFAULT 1,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
+            PRIMARY KEY (id),
+            KEY active_type_dates (is_active, room_type, start_date, end_date)
         ) $charset_collate;";
         
         // Availability Blocks Table
@@ -39,7 +51,8 @@ class SHB_Database {
             reason varchar(100) NOT NULL DEFAULT 'maintenance',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            KEY room_id (room_id)
+            KEY room_id (room_id),
+            KEY room_dates (room_id, start_date, end_date)
         ) $charset_collate;";
         
         // Payment Transactions Table
@@ -63,6 +76,8 @@ class SHB_Database {
         dbDelta($sql_pricing);
         dbDelta($sql_availability);
         dbDelta($sql_payments);
+
+        update_option('shb_db_version', SHB_DB_VERSION);
         
         // Insert default pricing rules
         self::insert_default_pricing_rules();
