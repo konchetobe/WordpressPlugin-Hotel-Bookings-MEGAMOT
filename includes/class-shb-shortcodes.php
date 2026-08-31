@@ -26,7 +26,22 @@ class SHB_Shortcodes
     {
         $atts = shortcode_atts(array(
             'style' => 'default',
+            'location' => '',
         ), $atts);
+
+        $locations = SHB_Location::get_active_locations();
+        $location = absint($atts['location']);
+        if (!$location && isset($_GET['location'])) {
+            $location = absint($_GET['location']);
+        }
+
+        // Honor the default-location behavior for shortcodes without a location.
+        if (!$location && get_option('shb_default_location_behavior', 'all') === 'default') {
+            $default_id = SHB_Location::get_default_location_id();
+            if ($default_id) {
+                $location = $default_id;
+            }
+        }
 
         ob_start();
         include SHB_PLUGIN_DIR . 'templates/room-search.php';
@@ -34,7 +49,7 @@ class SHB_Shortcodes
     }
 
     /**
-     * Room List Shortcode [shb_room_list columns="3" type="suite" limit="6"]
+     * Room List Shortcode [shb_room_list columns="3" type="suite" limit="6" location="12"]
      */
     public static function room_list($atts)
     {
@@ -42,11 +57,21 @@ class SHB_Shortcodes
             'type' => '',
             'limit' => -1,
             'columns' => 3,
+            'location' => '',
         ), $atts);
 
         $args = array(
             'posts_per_page' => intval($atts['limit']),
         );
+
+        if (!empty($atts['location'])) {
+            $args['location_id'] = absint($atts['location']);
+        } elseif (get_option('shb_default_location_behavior', 'all') === 'default') {
+            $default_id = SHB_Location::get_default_location_id();
+            if ($default_id) {
+                $args['location_id'] = $default_id;
+            }
+        }
 
         if (!empty($atts['type'])) {
             $rooms = SHB_Room::get_rooms_by_type($atts['type']);
@@ -78,6 +103,7 @@ class SHB_Shortcodes
     {
         $atts = shortcode_atts(array(
             'room_id' => 0,
+            'location' => '',
         ), $atts);
 
         $room_id = intval($atts['room_id']);
@@ -92,6 +118,16 @@ class SHB_Shortcodes
         $room = SHB_Room::get_room($room_id);
         if (!$room) {
             return '<p class="shb-error">' . __('Room not found.', 'sanctuary-hotel-booking') . '</p>';
+        }
+
+        $location = absint($atts['location']);
+        if (!$location && isset($_GET['location'])) {
+            $location = absint($_GET['location']);
+        }
+
+        // A room belongs to exactly one location; the passed location must match.
+        if ($location && $room['location_id'] && $location !== $room['location_id']) {
+            return '<p class="shb-error">' . __('That room does not belong to the selected location.', 'sanctuary-hotel-booking') . '</p>';
         }
 
         $check_in = isset($_GET['check_in']) ? sanitize_text_field($_GET['check_in']) : '';
@@ -170,6 +206,12 @@ class SHB_Shortcodes
             SHB_Payments::handle_payment_success($booking['id'], sanitize_text_field($_GET['session_id']));
             $booking = SHB_Booking::get_booking($booking['id']);
         }
+
+        // Location-specific times and currency for the confirmation page.
+        $location = $booking['location_id'] ? SHB_Location::get_location($booking['location_id']) : null;
+        $check_in_time = $location ? $location['check_in_time'] : get_option('shb_check_in_time', '14:00');
+        $check_out_time = $location ? $location['check_out_time'] : get_option('shb_check_out_time', '11:00');
+        $currency_symbol = $location ? $location['currency_symbol'] : get_option('shb_currency_symbol', '$');
 
         ob_start();
         include SHB_PLUGIN_DIR . 'templates/booking-confirmation.php';

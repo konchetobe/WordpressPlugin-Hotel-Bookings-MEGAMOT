@@ -58,38 +58,57 @@ rule without scope remains global.
 
 ## Delivery Phases
 
-1. Foundation and migration
+> Status: **all phases implemented in 1.4.0-beta.1**. See `tests/README.md`
+> for the manual verification checklist and `tests/verify.php` for WP-CLI
+> sanity checks. The GitHub release is cut via `.github/workflows/release.yml`.
+
+1. Foundation and migration ✅
    - Add a versioned schema migration framework and the location CPT.
    - Create one **Default location**, attach all existing rooms, migrate room
      types to taxonomy terms, and snapshot the location onto all bookings.
    - Produce an admin migration report for orphaned rooms, missing locations,
      invalid dates, and already-overlapping legacy bookings. Do not auto-delete
      or silently resolve those records.
+   - Implemented: `SHB_Database::get_migrations()`, `SHB_Location`,
+     `SHB_Migration`, `shb_location` CPT, **Hotel Booking → Migration** page,
+     `wp_shb_room_nights` table.
 
-2. Admin management
+2. Admin management ✅
    - Add Locations list/add/edit pages, a required location selector on rooms,
      location filters for rooms/bookings, a per-location availability calendar,
      and scoped pricing controls.
    - Add roles/capabilities so a location manager can administer only assigned
      locations; retain `manage_options` for global configuration.
+   - Implemented: `SHB_Admin_Locations` + views, room meta location selector,
+     Location column + list filter on rooms/bookings, availability filter,
+     scoped pricing UI (Global/Location/Room Type at Location/Room),
+     `SHB_Roles` with `shb_location_manager` + `shb_assigned_location_ids`.
 
-3. Transactional booking flow
+3. Transactional booking flow ✅
    - Replace post-meta availability scans with room-night allocation queries.
    - Within a database transaction: revalidate dates and capacity, insert each
      night, create the booking, and save all snapshots. Roll back on any error.
    - Create expiring holds for Stripe checkout and clear stale holds through
      scheduled cleanup. Confirm payment only from a verified Stripe webhook;
      callback URLs are not a source of truth.
+   - Implemented: `SHB_Room_Nights` (claim/release/holds/cron
+     `shb_cleanup_expired_holds`), transactional `SHB_Booking::create_booking()`,
+     `_shb_price_snapshot`, Stripe webhook at
+     `POST /wp-json/sanctuary-hotel-booking/v1/stripe-webhook` with HMAC
+     signature verification.
 
-4. Frontend and API
+4. Frontend and API ✅
    - Add a location selector (or preselect from a location page), pass the
      selected location through searches, and show location-specific details in
      cards, confirmation, emails, and ICS files.
    - Add location filters to Gutenberg blocks/shortcodes and preserve existing
      shortcodes by defaulting them to all active locations or the Default
      location, according to the chosen migration setting.
+   - Implemented: location selector in `[shb_room_search]`, `location` attribute
+     on `[shb_room_list]`/`[shb_booking_form]` and the blocks, location-aware
+     emails/ICS/confirmation, `shb_default_location_behavior` setting.
 
-5. Reporting, tests, and rollout
+5. Reporting, tests, and rollout ✅
    - Add occupancy/revenue reports grouped by location and timezone-correct
      date ranges.
    - Test cross-location room names, overlapping stays, hold expiry, scope
@@ -97,6 +116,10 @@ rule without scope remains global.
      booking.
    - Take a database backup before migration and retain an opt-in compatibility
      period for legacy room-type meta and location defaults.
+   - Implemented: **Hotel Booking → Reports** (occupancy + revenue by
+     location), `tests/README.md` checklist, `tests/verify.php` WP-CLI script.
+     Legacy `_shb_room_type` meta and global pricing rules remain supported
+     (compatibility window).
 
 ## Pricing Precedence
 

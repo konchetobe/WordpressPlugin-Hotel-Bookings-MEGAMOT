@@ -54,12 +54,13 @@ class SHB_Ajax
         $check_in = sanitize_text_field(wp_unslash($_POST['check_in'] ?? ''));
         $check_out = sanitize_text_field(wp_unslash($_POST['check_out'] ?? ''));
         $guests = max(1, absint($_POST['guests'] ?? 1));
+        $location_id = absint($_POST['location_id'] ?? 0);
 
         if (SHB_Booking::calculate_nights($check_in, $check_out) < 1) {
             wp_send_json_error(array('message' => __('Please select a valid check-in and check-out date', 'sanctuary-hotel-booking')));
         }
 
-        $rooms = SHB_Room::search_available_rooms($check_in, $check_out, $guests);
+        $rooms = SHB_Room::search_available_rooms($check_in, $check_out, $guests, $location_id);
 
         wp_send_json_success(array('rooms' => $rooms));
     }
@@ -346,6 +347,9 @@ class SHB_Ajax
             'name' => sanitize_text_field($_POST['name']),
             'rule_type' => sanitize_text_field($_POST['rule_type']),
             'room_type' => sanitize_text_field($_POST['room_type'] ?? ''),
+            'location_id' => absint($_POST['location_id'] ?? 0),
+            'room_id' => absint($_POST['room_id'] ?? 0),
+            'room_type_term_id' => absint($_POST['room_type_term_id'] ?? 0),
             'start_date' => sanitize_text_field($_POST['start_date'] ?? ''),
             'end_date' => sanitize_text_field($_POST['end_date'] ?? ''),
             'multiplier' => floatval($_POST['multiplier']),

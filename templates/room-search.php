@@ -1,6 +1,19 @@
 <div class="shb-room-search" data-testid="shb-room-search">
     <form class="shb-search-form" id="shb-search-form">
         <div class="shb-search-fields">
+            <?php if (count($locations) > 1): ?>
+                <div class="shb-field">
+                    <label for="shb-location"><?php _e('Location', 'sanctuary-hotel-booking'); ?></label>
+                    <select id="shb-location" name="location">
+                        <option value=""><?php _e('All Locations', 'sanctuary-hotel-booking'); ?></option>
+                        <?php foreach ($locations as $loc): ?>
+                            <option value="<?php echo esc_attr($loc['id']); ?>" <?php selected($location, $loc['id']); ?>>
+                                <?php echo esc_html($loc['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            <?php endif; ?>
             <div class="shb-field">
                 <label for="shb-check-in"><?php _e('Check-in', 'sanctuary-hotel-booking'); ?></label>
                 <input type="text" id="shb-check-in" name="check_in" class="shb-datepicker" 

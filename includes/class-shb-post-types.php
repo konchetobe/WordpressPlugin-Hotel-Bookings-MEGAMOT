@@ -44,6 +44,37 @@ class SHB_Post_Types {
             'show_in_rest' => true,
         ));
         
+        // Locations Post Type
+        register_post_type('shb_location', array(
+            'labels' => array(
+                'name' => __('Locations', 'sanctuary-hotel-booking'),
+                'singular_name' => __('Location', 'sanctuary-hotel-booking'),
+                'add_new' => __('Add New', 'sanctuary-hotel-booking'),
+                'add_new_item' => __('Add New Location', 'sanctuary-hotel-booking'),
+                'edit_item' => __('Edit Location', 'sanctuary-hotel-booking'),
+                'new_item' => __('New Location', 'sanctuary-hotel-booking'),
+                'view_item' => __('View Location', 'sanctuary-hotel-booking'),
+                'view_items' => __('View Locations', 'sanctuary-hotel-booking'),
+                'search_items' => __('Search Locations', 'sanctuary-hotel-booking'),
+                'not_found' => __('No locations found', 'sanctuary-hotel-booking'),
+                'not_found_in_trash' => __('No locations found in trash', 'sanctuary-hotel-booking'),
+                'all_items' => __('All Locations', 'sanctuary-hotel-booking'),
+                'menu_name' => __('Locations', 'sanctuary-hotel-booking'),
+            ),
+            'public' => true,
+            'publicly_queryable' => true,
+            'show_ui' => true,
+            'show_in_menu' => false, // Added via custom submenu so we control capability.
+            'query_var' => true,
+            'rewrite' => array('slug' => 'locations', 'with_front' => false),
+            'capability_type' => 'post',
+            'has_archive' => true,
+            'hierarchical' => false,
+            'menu_position' => null,
+            'supports' => array('title', 'editor', 'thumbnail', 'excerpt'),
+            'show_in_rest' => true,
+        ));
+
         // Bookings Post Type
         register_post_type('shb_booking', array(
             'labels' => array(

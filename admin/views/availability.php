@@ -3,6 +3,19 @@
     
     <p><?php _e('Block dates for maintenance, private events, or other reasons.', 'sanctuary-hotel-booking'); ?></p>
     
+    <form method="get" action="" class="shb-filter-inline" style="margin-bottom:12px;">
+        <input type="hidden" name="page" value="shb-availability">
+        <select name="location">
+            <option value="0"><?php _e('All Locations', 'sanctuary-hotel-booking'); ?></option>
+            <?php foreach ($locations as $loc): ?>
+                <option value="<?php echo esc_attr($loc['id']); ?>" <?php selected($location_filter, $loc['id']); ?>>
+                    <?php echo esc_html($loc['name']); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <input type="submit" class="button" value="<?php _e('Filter', 'sanctuary-hotel-booking'); ?>">
+    </form>
+    
     <button type="button" class="button button-primary" id="shb-add-block">
         <span class="dashicons dashicons-calendar-alt"></span>
         <?php _e('Block Dates', 'sanctuary-hotel-booking'); ?>

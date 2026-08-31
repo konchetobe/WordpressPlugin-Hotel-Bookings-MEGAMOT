@@ -49,74 +49,120 @@ class SHB_Booking {
         if ($nights < $room['min_nights'] || $nights > $room['max_nights']) {
             return new WP_Error('invalid_stay_length', __('The selected stay does not meet this room\'s night limits', 'sanctuary-hotel-booking'));
         }
-        
-        // Check availability
-        $is_available = SHB_Availability::check_room_availability(
-            $data['room_id'],
-            $data['check_in'],
-            $data['check_out']
-        );
-        
-        if (!$is_available) {
-            return new WP_Error('not_available', __('Room is not available for selected dates', 'sanctuary-hotel-booking'));
+
+        global $wpdb;
+        $wpdb->query('START TRANSACTION');
+
+        try {
+            // Revalidate availability inside the transaction (authoritative table).
+            $is_available = SHB_Room_Nights::check_availability(
+                $data['room_id'],
+                $data['check_in'],
+                $data['check_out']
+            );
+
+            if (!$is_available) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('not_available', __('Room is not available for selected dates', 'sanctuary-hotel-booking'));
+            }
+
+            // Calculate total price + build the immutable price snapshot.
+            $breakdown = SHB_Pricing::get_price_breakdown(
+                $data['room_id'],
+                $data['check_in'],
+                $data['check_out']
+            );
+            $total_price = $breakdown ? $breakdown['total'] : 0;
+            $price_snapshot = array(
+                'base_price' => $breakdown ? $breakdown['base_price'] : 0,
+                'nights' => $nights,
+                'nightly_rates' => $breakdown ? $breakdown['nightly_rates'] : array(),
+                'applied_rule_ids' => $breakdown ? $breakdown['applied_rule_ids'] : array(),
+                'subtotal' => $breakdown ? $breakdown['subtotal'] : 0,
+                'taxes' => 0,
+                'total' => $total_price,
+            );
+
+            // Create booking post
+            $booking_title = sprintf(
+                '%s - %s %s (%s to %s)',
+                $room['name'],
+                $data['first_name'],
+                $data['last_name'],
+                $data['check_in'],
+                $data['check_out']
+            );
+
+            $booking_id = wp_insert_post(array(
+                'post_title' => $booking_title,
+                'post_type' => 'shb_booking',
+                'post_status' => 'publish',
+            ));
+
+            if (is_wp_error($booking_id)) {
+                $wpdb->query('ROLLBACK');
+                return $booking_id;
+            }
+
+            $location_id = absint($room['location_id']);
+            $location_name = $room['location_name'];
+
+            // Save booking meta
+            update_post_meta($booking_id, '_shb_room_id', $data['room_id']);
+            update_post_meta($booking_id, '_shb_room_name', $room['name']);
+            update_post_meta($booking_id, '_shb_location_id', $location_id);
+            update_post_meta($booking_id, '_shb_location_name', $location_name);
+            update_post_meta($booking_id, '_shb_check_in', $data['check_in']);
+            update_post_meta($booking_id, '_shb_check_out', $data['check_out']);
+            update_post_meta($booking_id, '_shb_guests', $data['guests']);
+            update_post_meta($booking_id, '_shb_first_name', sanitize_text_field($data['first_name']));
+            update_post_meta($booking_id, '_shb_last_name', sanitize_text_field($data['last_name']));
+            update_post_meta($booking_id, '_shb_email', sanitize_email($data['email']));
+            update_post_meta($booking_id, '_shb_phone', sanitize_text_field($data['phone']));
+            update_post_meta($booking_id, '_shb_special_requests', sanitize_textarea_field($data['special_requests'] ?? ''));
+            update_post_meta($booking_id, '_shb_total_price', $total_price);
+            update_post_meta($booking_id, '_shb_price_snapshot', $price_snapshot);
+            update_post_meta($booking_id, '_shb_payment_method', sanitize_text_field($data['payment_method'] ?? 'stripe'));
+            update_post_meta($booking_id, '_shb_payment_status', 'pending');
+            update_post_meta($booking_id, '_shb_booking_status', 'pending');
+            update_post_meta($booking_id, '_shb_booking_date', current_time('mysql'));
+
+            // Generate unique booking reference
+            $booking_ref = 'SHB-' . strtoupper(substr(md5($booking_id . time()), 0, 8));
+            update_post_meta($booking_id, '_shb_booking_ref', $booking_ref);
+            $booking_token = wp_generate_password(32, false, false);
+            update_post_meta($booking_id, '_shb_calendar_token', $booking_token);
+
+            // Claim nights atomically inside the transaction.
+            $claim = SHB_Room_Nights::claim_nights(
+                $data['room_id'],
+                $location_id,
+                $booking_id,
+                $data['check_in'],
+                $data['check_out']
+            );
+
+            if (is_wp_error($claim)) {
+                $wpdb->query('ROLLBACK');
+                wp_delete_post($booking_id, true);
+                return $claim;
+            }
+
+            $wpdb->query('COMMIT');
+
+            return array(
+                'booking_id' => $booking_id,
+                'booking_ref' => $booking_ref,
+                'booking_token' => $booking_token,
+                'total_price' => $total_price,
+            );
+        } catch (\Throwable $exception) {
+            $wpdb->query('ROLLBACK');
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Sanctuary Hotel Booking] Booking creation failed: ' . $exception->getMessage());
+            }
+            return new WP_Error('booking_failed', __('Unable to create the booking. Please try again.', 'sanctuary-hotel-booking'));
         }
-        
-        // Calculate total price
-        $total_price = SHB_Pricing::calculate_total_price(
-            $data['room_id'],
-            $data['check_in'],
-            $data['check_out']
-        );
-        
-        // Create booking post
-        $booking_title = sprintf(
-            '%s - %s %s (%s to %s)',
-            $room['name'],
-            $data['first_name'],
-            $data['last_name'],
-            $data['check_in'],
-            $data['check_out']
-        );
-        
-        $booking_id = wp_insert_post(array(
-            'post_title' => $booking_title,
-            'post_type' => 'shb_booking',
-            'post_status' => 'publish',
-        ));
-        
-        if (is_wp_error($booking_id)) {
-            return $booking_id;
-        }
-        
-        // Save booking meta
-        update_post_meta($booking_id, '_shb_room_id', $data['room_id']);
-        update_post_meta($booking_id, '_shb_room_name', $room['name']);
-        update_post_meta($booking_id, '_shb_check_in', $data['check_in']);
-        update_post_meta($booking_id, '_shb_check_out', $data['check_out']);
-        update_post_meta($booking_id, '_shb_guests', $data['guests']);
-        update_post_meta($booking_id, '_shb_first_name', sanitize_text_field($data['first_name']));
-        update_post_meta($booking_id, '_shb_last_name', sanitize_text_field($data['last_name']));
-        update_post_meta($booking_id, '_shb_email', sanitize_email($data['email']));
-        update_post_meta($booking_id, '_shb_phone', sanitize_text_field($data['phone']));
-        update_post_meta($booking_id, '_shb_special_requests', sanitize_textarea_field($data['special_requests'] ?? ''));
-        update_post_meta($booking_id, '_shb_total_price', $total_price);
-        update_post_meta($booking_id, '_shb_payment_method', sanitize_text_field($data['payment_method'] ?? 'stripe'));
-        update_post_meta($booking_id, '_shb_payment_status', 'pending');
-        update_post_meta($booking_id, '_shb_booking_status', 'pending');
-        update_post_meta($booking_id, '_shb_booking_date', current_time('mysql'));
-        
-        // Generate unique booking reference
-        $booking_ref = 'SHB-' . strtoupper(substr(md5($booking_id . time()), 0, 8));
-        update_post_meta($booking_id, '_shb_booking_ref', $booking_ref);
-        $booking_token = wp_generate_password(32, false, false);
-        update_post_meta($booking_id, '_shb_calendar_token', $booking_token);
-        
-        return array(
-            'booking_id' => $booking_id,
-            'booking_ref' => $booking_ref,
-            'booking_token' => $booking_token,
-            'total_price' => $total_price,
-        );
     }
     
     /**
@@ -167,6 +213,8 @@ class SHB_Booking {
             'booking_ref' => get_post_meta($booking_id, '_shb_booking_ref', true),
             'room_id' => get_post_meta($booking_id, '_shb_room_id', true),
             'room_name' => get_post_meta($booking_id, '_shb_room_name', true),
+            'location_id' => get_post_meta($booking_id, '_shb_location_id', true),
+            'location_name' => get_post_meta($booking_id, '_shb_location_name', true),
             'check_in' => get_post_meta($booking_id, '_shb_check_in', true),
             'check_out' => get_post_meta($booking_id, '_shb_check_out', true),
             'guests' => get_post_meta($booking_id, '_shb_guests', true),
@@ -182,6 +230,8 @@ class SHB_Booking {
             'booking_date' => get_post_meta($booking_id, '_shb_booking_date', true),
             'stripe_session_id' => get_post_meta($booking_id, '_shb_stripe_session_id', true),
             'calendar_token' => $calendar_token,
+            'price_snapshot' => get_post_meta($booking_id, '_shb_price_snapshot', true),
+            'hold_expires_at' => get_post_meta($booking_id, '_shb_hold_expires_at', true),
         );
     }
     
@@ -196,6 +246,11 @@ class SHB_Booking {
         }
         
         update_post_meta($booking_id, '_shb_booking_status', $status);
+        
+        // A cancellation frees the room's claimed nights.
+        if ($status === 'cancelled') {
+            SHB_Room_Nights::release_nights($booking_id);
+        }
         
         // Send email notification
         if ($status === 'confirmed') {
@@ -232,6 +287,17 @@ class SHB_Booking {
         );
         
         $args = wp_parse_args($args, $defaults);
+
+        // Support filtering by location.
+        if (!empty($args['location_id'])) {
+            $location_id = absint($args['location_id']);
+            unset($args['location_id']);
+            $args['meta_query'][] = array(
+                'key' => '_shb_location_id',
+                'value' => $location_id,
+            );
+        }
+
         $bookings = get_posts($args);
         
         return array_map(array(__CLASS__, 'format_booking'), $bookings);
@@ -273,9 +339,11 @@ class SHB_Booking {
             return;
         }
         
-        $currency = get_option('shb_currency_symbol', '$');
-        $check_in_time = get_option('shb_check_in_time', '14:00');
-        $check_out_time = get_option('shb_check_out_time', '11:00');
+        $location = !empty($booking['location_id']) ? SHB_Location::get_location($booking['location_id']) : null;
+        $currency = $location ? $location['currency_symbol'] : get_option('shb_currency_symbol', '$');
+        $check_in_time = $location ? $location['check_in_time'] : get_option('shb_check_in_time', '14:00');
+        $check_out_time = $location ? $location['check_out_time'] : get_option('shb_check_out_time', '11:00');
+        $location_name = $booking['location_name'] ?: '';
         $site_name = get_bloginfo('name');
         
         $to = $booking['email'];
@@ -288,6 +356,7 @@ class SHB_Booking {
             "BOOKING DETAILS\n" .
             "━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" .
             "Reference: %s\n" .
+            "Location: %s\n" .
             "Room: %s\n" .
             "Check-in: %s at %s\n" .
             "Check-out: %s at %s\n" .
@@ -302,6 +371,7 @@ class SHB_Booking {
             $booking['first_name'],
             $booking['last_name'],
             $booking['booking_ref'],
+            $location_name,
             $booking['room_name'],
             $booking['check_in'],
             $check_in_time,
@@ -352,9 +422,11 @@ class SHB_Booking {
             return new WP_Error('invalid_booking', __('Booking not found', 'sanctuary-hotel-booking'));
         }
         
-        $currency = get_option('shb_currency_symbol', '$');
-        $check_in_time = get_option('shb_check_in_time', '14:00');
-        $check_out_time = get_option('shb_check_out_time', '11:00');
+        $location = !empty($booking['location_id']) ? SHB_Location::get_location($booking['location_id']) : null;
+        $currency = $location ? $location['currency_symbol'] : get_option('shb_currency_symbol', '$');
+        $check_in_time = $location ? $location['check_in_time'] : get_option('shb_check_in_time', '14:00');
+        $check_out_time = $location ? $location['check_out_time'] : get_option('shb_check_out_time', '11:00');
+        $location_name = $booking['location_name'] ?: '';
         $site_name = get_bloginfo('name');
         $status_label = ucfirst(str_replace('_', ' ', $booking['booking_status']));
         
@@ -369,6 +441,7 @@ class SHB_Booking {
             "━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" .
             "Reference: %s\n" .
             "Status: %s\n" .
+            "Location: %s\n" .
             "Room: %s\n" .
             "Check-in: %s at %s\n" .
             "Check-out: %s at %s\n" .
@@ -382,6 +455,7 @@ class SHB_Booking {
             $booking['last_name'],
             $booking['booking_ref'],
             $status_label,
+            $location_name,
             $booking['room_name'],
             $booking['check_in'],
             $check_in_time,

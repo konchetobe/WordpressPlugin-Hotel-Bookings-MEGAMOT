@@ -4,7 +4,7 @@ Tags: hotel booking, reservation, accommodation, booking system, hotel managemen
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.3.1
+Stable tag: 1.4.0-beta.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,18 @@ Yes, go to Hotel Booking > Availability to create date blocks for any room.
 6. Settings page
 
 == Changelog ==
+
+= 1.4.0-beta.1 =
+* **Multiple locations** — new `shb_location` post type with address, contact, time zone, currency, and check-in/out times.
+* **Default location migration** — attaches existing rooms and snapshots location data onto historical bookings; read-only migration report flags orphans, invalid dates, and overlapping legacy bookings.
+* **Room-night allocation table** — per-night inventory with a unique `(room_id, stay_date)` index that makes double bookings impossible.
+* **Transactional booking creation** — availability revalidation, nightly claims, price snapshots, and booking creation commit or roll back together.
+* **Stripe webhook** — payment confirmation now happens only from a verified `checkout.session.completed` webhook; expiring 30-minute holds are cleaned up automatically.
+* **Scoped pricing** — rules can target a global scope, location, room type at a location, or a specific room with per-night precedence.
+* **Location manager role** — manage rooms/bookings only for assigned locations.
+* **Reports** — occupancy and revenue per location and room.
+* **Frontend location selector** — search form, room lists, booking forms, confirmation, emails, and calendar events are location-aware.
+* **GitHub Actions release workflow** — `Bump Version & Release` builds a ZIP and publishes a GitHub Release that auto-updates the plugin.
 
 = 1.3.1 =
 * Added GitHub Release automatic updates using the bundled Plugin Update Checker.

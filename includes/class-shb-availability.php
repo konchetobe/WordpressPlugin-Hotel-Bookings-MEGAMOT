@@ -18,7 +18,14 @@ class SHB_Availability {
             return false;
         }
         
-        // Check existing bookings
+        // Authoritative check: the room-nights allocation table.
+        if (!SHB_Room_Nights::check_availability($room_id, $check_in, $check_out, $exclude_booking_id)) {
+            return false;
+        }
+        
+        // Legacy fallback for bookings not yet represented in the table
+        // (pre-migration edge case). Once Phase 1 has backfilled, this is redundant
+        // but harmless.
         if (self::has_conflicting_booking($room_id, $check_in, $check_out, $exclude_booking_id)) {
             return false;
         }

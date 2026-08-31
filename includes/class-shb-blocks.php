@@ -28,6 +28,7 @@ class SHB_Blocks {
             'render_callback' => array('SHB_Shortcodes', 'room_search'),
             'attributes' => array(
                 'style' => array('type' => 'string', 'default' => 'default'),
+                'location' => array('type' => 'number', 'default' => 0),
             ),
         ));
         
@@ -38,6 +39,7 @@ class SHB_Blocks {
                 'columns' => array('type' => 'number', 'default' => 3),
                 'type' => array('type' => 'string', 'default' => ''),
                 'limit' => array('type' => 'number', 'default' => -1),
+                'location' => array('type' => 'number', 'default' => 0),
             ),
         ));
         
@@ -46,6 +48,7 @@ class SHB_Blocks {
             'render_callback' => array(__CLASS__, 'render_booking_form'),
             'attributes' => array(
                 'roomId' => array('type' => 'number', 'default' => 0),
+                'location' => array('type' => 'number', 'default' => 0),
             ),
         ));
         
@@ -70,6 +73,7 @@ class SHB_Blocks {
             'columns' => isset($attributes['columns']) ? $attributes['columns'] : 3,
             'type' => isset($attributes['type']) ? $attributes['type'] : '',
             'limit' => isset($attributes['limit']) ? $attributes['limit'] : -1,
+            'location' => isset($attributes['location']) ? $attributes['location'] : 0,
         ));
     }
     
@@ -79,6 +83,7 @@ class SHB_Blocks {
     public static function render_booking_form($attributes) {
         return SHB_Shortcodes::booking_form(array(
             'room_id' => isset($attributes['roomId']) ? $attributes['roomId'] : 0,
+            'location' => isset($attributes['location']) ? $attributes['location'] : 0,
         ));
     }
     

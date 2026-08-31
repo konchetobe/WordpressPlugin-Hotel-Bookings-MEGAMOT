@@ -38,6 +38,7 @@ assets/
 | `.shb-booking-confirmation` | Confirmation page |
 | `.shb-button` | Button base class |
 | `.shb-status-*` | Status badges |
+| `.shb-room-location` | Location name on cards |
 
 ## JavaScript Architecture
 
@@ -46,13 +47,18 @@ assets/
 // Main entry point
 $(document).ready(function() {
     initDatePickers();      // Initialize date pickers
-    initRoomSearch();       // Room search functionality
+    initRoomSearch();       // Room search (sends location_id, renders location name)
     initBookingForm();      // Booking form handling
 });
 ```
 
 `public.js` escapes room fields and limits dynamically generated image/link
-URLs to HTTP(S) before adding AJAX search results to the page.
+URLs to HTTP(S) before adding AJAX search results to the page. Search results
+include a location line and the book URL carries `location`.
+
+### Admin (admin.js)
+- Pricing rules modal includes a scope selector (Global / Location / Room Type
+  at Location / Room) with dependent dropdowns populated server-side.
 
 ### AJAX Pattern
 ```javascript

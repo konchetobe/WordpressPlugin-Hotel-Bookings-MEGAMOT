@@ -32,8 +32,10 @@ class SHB_Admin_Settings
             'shb_stripe_test_mode' => 'intval',
             'shb_stripe_test_publishable_key' => 'sanitize_text_field',
             'shb_stripe_test_secret_key' => 'sanitize_text_field',
+            'shb_stripe_test_webhook_secret' => 'sanitize_text_field',
             'shb_stripe_live_publishable_key' => 'sanitize_text_field',
             'shb_stripe_live_secret_key' => 'sanitize_text_field',
+            'shb_stripe_live_webhook_secret' => 'sanitize_text_field',
             'shb_paypal_enabled' => 'intval',
             'shb_bank_transfer_enabled' => 'intval',
             'shb_bank_account_holder' => 'sanitize_text_field',
@@ -50,6 +52,7 @@ class SHB_Admin_Settings
             'shb_button_style' => 'sanitize_text_field',
             'shb_font_family' => 'sanitize_text_field',
             'shb_custom_css' => 'wp_strip_all_tags',
+            'shb_default_location_behavior' => 'sanitize_text_field',
         );
 
         $checkbox_fields = array(

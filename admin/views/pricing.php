@@ -31,12 +31,54 @@
                 </p>
                 
                 <p>
-                    <label for="rule_room_type"><?php _e('Room Type (optional)', 'sanctuary-hotel-booking'); ?></label>
+                    <label for="rule_room_type"><?php _e('Room Type (legacy, optional)', 'sanctuary-hotel-booking'); ?></label>
                     <select name="room_type" id="rule_room_type">
                         <option value=""><?php _e('All Rooms', 'sanctuary-hotel-booking'); ?></option>
                         <option value="standard"><?php _e('Standard', 'sanctuary-hotel-booking'); ?></option>
                         <option value="deluxe"><?php _e('Deluxe', 'sanctuary-hotel-booking'); ?></option>
                         <option value="suite"><?php _e('Suite', 'sanctuary-hotel-booking'); ?></option>
+                    </select>
+                </p>
+
+                <p>
+                    <label for="rule_scope"><?php _e('Scope', 'sanctuary-hotel-booking'); ?></label>
+                    <select name="scope" id="rule_scope">
+                        <option value=""><?php _e('Global', 'sanctuary-hotel-booking'); ?></option>
+                        <option value="location"><?php _e('Location', 'sanctuary-hotel-booking'); ?></option>
+                        <option value="room_type"><?php _e('Room Type at Location', 'sanctuary-hotel-booking'); ?></option>
+                        <option value="room"><?php _e('Room', 'sanctuary-hotel-booking'); ?></option>
+                    </select>
+                </p>
+
+                <p id="rule_scope_location_wrap" style="display:none;">
+                    <label for="rule_location_id"><?php _e('Location', 'sanctuary-hotel-booking'); ?></label>
+                    <select name="location_id" id="rule_location_id">
+                        <option value=""><?php _e('Select Location', 'sanctuary-hotel-booking'); ?></option>
+                        <?php foreach ($locations as $loc): ?>
+                            <option value="<?php echo esc_attr($loc['id']); ?>"><?php echo esc_html($loc['name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </p>
+
+                <p id="rule_scope_room_type_wrap" style="display:none;">
+                    <label for="rule_room_type_term"><?php _e('Room Type', 'sanctuary-hotel-booking'); ?></label>
+                    <select name="room_type_term_id" id="rule_room_type_term">
+                        <option value=""><?php _e('Select Room Type', 'sanctuary-hotel-booking'); ?></option>
+                        <?php foreach ($room_types as $term): ?>
+                            <option value="<?php echo esc_attr($term->term_id); ?>"><?php echo esc_html($term->name); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </p>
+
+                <p id="rule_scope_room_wrap" style="display:none;">
+                    <label for="rule_room_id"><?php _e('Room', 'sanctuary-hotel-booking'); ?></label>
+                    <select name="room_id" id="rule_room_id">
+                        <option value=""><?php _e('Select Room', 'sanctuary-hotel-booking'); ?></option>
+                        <?php foreach ($rooms as $room): ?>
+                            <option value="<?php echo esc_attr($room['id']); ?>">
+                                <?php echo esc_html($room['name'] . ($room['location_name'] ? ' (' . $room['location_name'] . ')' : '')); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </p>
                 
@@ -78,6 +120,7 @@
                 <tr>
                     <th><?php _e('Name', 'sanctuary-hotel-booking'); ?></th>
                     <th><?php _e('Type', 'sanctuary-hotel-booking'); ?></th>
+                    <th><?php _e('Scope', 'sanctuary-hotel-booking'); ?></th>
                     <th><?php _e('Room Type', 'sanctuary-hotel-booking'); ?></th>
                     <th><?php _e('Date Range', 'sanctuary-hotel-booking'); ?></th>
                     <th><?php _e('Multiplier', 'sanctuary-hotel-booking'); ?></th>
@@ -90,6 +133,23 @@
                     <tr data-rule-id="<?php echo esc_attr($rule['id']); ?>">
                         <td><strong><?php echo esc_html($rule['name']); ?></strong></td>
                         <td><?php echo esc_html(ucfirst(str_replace('_', ' ', $rule['rule_type']))); ?></td>
+                        <td>
+                            <?php
+                            if (!empty($rule['room_id'])) {
+                                $room = SHB_Room::get_room($rule['room_id']);
+                                echo esc_html($room ? $room['name'] : '#' . $rule['room_id']);
+                            } elseif (!empty($rule['room_type_term_id'])) {
+                                $term = get_term($rule['room_type_term_id'], 'shb_room_type');
+                                $loc = $rule['location_id'] ? SHB_Location::get_location($rule['location_id']) : null;
+                                echo esc_html(($term && !is_wp_error($term) ? $term->name : '#' . $rule['room_type_term_id']) . ($loc ? ' @ ' . $loc['name'] : ''));
+                            } elseif (!empty($rule['location_id'])) {
+                                $loc = SHB_Location::get_location($rule['location_id']);
+                                echo esc_html($loc ? $loc['name'] : '#' . $rule['location_id']);
+                            } else {
+                                _e('Global', 'sanctuary-hotel-booking');
+                            }
+                            ?>
+                        </td>
                         <td><?php echo $rule['room_type'] ? esc_html(ucfirst($rule['room_type'])) : __('All', 'sanctuary-hotel-booking'); ?></td>
                         <td>
                             <?php if ($rule['start_date'] && $rule['end_date']) : ?>

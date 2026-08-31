@@ -123,6 +123,9 @@
                     <div class="shb-summary-room-info">
                         <h4><?php echo esc_html($room['name']); ?></h4>
                         <span class="shb-room-type-badge shb-badge-sm"><?php echo esc_html(ucfirst($room['room_type'])); ?></span>
+                        <?php if (!empty($room['location_name'])): ?>
+                            <span class="shb-room-location"><?php echo esc_html($room['location_name']); ?></span>
+                        <?php endif; ?>
                     </div>
                 </div>
                 

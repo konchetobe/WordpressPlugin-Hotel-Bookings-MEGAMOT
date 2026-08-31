@@ -21,18 +21,22 @@ class SHB_Calendar {
         $room = SHB_Room::get_room($booking['room_id']);
         $room_name = $room ? $room['name'] : $booking['room_name'];
         
-        // Get check-in/out times
-        $check_in_time = get_option('shb_check_in_time', '14:00');
-        $check_out_time = get_option('shb_check_out_time', '11:00');
+        // Location-specific times, timezone, and contact details.
+        $location = !empty($booking['location_id']) ? SHB_Location::get_location($booking['location_id']) : null;
+        $check_in_time = $location ? $location['check_in_time'] : get_option('shb_check_in_time', '14:00');
+        $check_out_time = $location ? $location['check_out_time'] : get_option('shb_check_out_time', '11:00');
+        $timezone = $location ? $location['timezone'] : wp_timezone_string();
+        $location_name = $booking['location_name'] ?: 'Sanctuary Hotel';
+        $location_address = $location ? trim($location['address'] . ', ' . $location['city'], ', ') : '';
         
-        // Build datetime strings
+        // Build datetime strings (floating times are rendered in the location TZ).
         $dtstart = self::format_ics_datetime($booking['check_in'], $check_in_time);
         $dtend = self::format_ics_datetime($booking['check_out'], $check_out_time);
         $dtstamp = gmdate('Ymd\THis\Z');
         
         // Build description
-        $currency_symbol = get_option('shb_currency_symbol', '$');
-        $description = self::build_description($booking, $room_name, $currency_symbol);
+        $currency_symbol = $location ? $location['currency_symbol'] : get_option('shb_currency_symbol', '$');
+        $description = self::build_description($booking, $room_name, $currency_symbol, $location_name);
         
         // Build UID
         $uid = $booking['booking_ref'] . '@' . parse_url(home_url(), PHP_URL_HOST);
@@ -45,12 +49,12 @@ class SHB_Calendar {
         $ics .= "METHOD:PUBLISH\r\n";
         $ics .= "BEGIN:VEVENT\r\n";
         $ics .= "UID:" . $uid . "\r\n";
-        $ics .= "SUMMARY:Hotel Stay - " . $room_name . "\r\n";
+        $ics .= "SUMMARY:Hotel Stay - " . $room_name . " (" . $location_name . ")\r\n";
         $ics .= "DTSTART:" . $dtstart . "\r\n";
         $ics .= "DTEND:" . $dtend . "\r\n";
         $ics .= "DTSTAMP:" . $dtstamp . "\r\n";
         $ics .= "DESCRIPTION:" . self::escape_ics_text($description) . "\r\n";
-        $ics .= "LOCATION:" . self::escape_ics_text($room_name . " - Sanctuary Hotel") . "\r\n";
+        $ics .= "LOCATION:" . self::escape_ics_text($location_name . ($location_address ? ', ' . $location_address : '')) . "\r\n";
         $ics .= "STATUS:CONFIRMED\r\n";
         $ics .= "END:VEVENT\r\n";
         $ics .= "END:VCALENDAR\r\n";
@@ -69,11 +73,12 @@ class SHB_Calendar {
     /**
      * Build description text
      */
-    private static function build_description($booking, $room_name, $currency_symbol) {
+    private static function build_description($booking, $room_name, $currency_symbol, $location_name = '') {
         $lines = array(
             'Hotel Reservation Confirmation',
             '',
             'Booking Reference: ' . $booking['booking_ref'],
+            'Location: ' . ($location_name ?: 'Sanctuary Hotel'),
             'Room: ' . $room_name,
             'Check-in: ' . $booking['check_in'],
             'Check-out: ' . $booking['check_out'],

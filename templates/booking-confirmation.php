@@ -43,11 +43,15 @@
                 <span class="shb-detail-value"><?php echo esc_html($booking['room_name']); ?></span>
             </div>
             <div class="shb-detail-item">
+                <span class="shb-detail-label"><?php _e('Location', 'sanctuary-hotel-booking'); ?></span>
+                <span class="shb-detail-value"><?php echo esc_html($booking['location_name'] ?: '—'); ?></span>
+            </div>
+            <div class="shb-detail-item">
                 <span class="shb-detail-label"><?php _e('Check-in', 'sanctuary-hotel-booking'); ?></span>
                 <span class="shb-detail-value">
                     <?php echo esc_html($booking['check_in']); ?>
                     <small><?php _e('from', 'sanctuary-hotel-booking'); ?>
-                        <?php echo esc_html(get_option('shb_check_in_time', '14:00')); ?></small>
+                        <?php echo esc_html($check_in_time); ?></small>
                 </span>
             </div>
             <div class="shb-detail-item">
@@ -55,7 +59,7 @@
                 <span class="shb-detail-value">
                     <?php echo esc_html($booking['check_out']); ?>
                     <small><?php _e('until', 'sanctuary-hotel-booking'); ?>
-                        <?php echo esc_html(get_option('shb_check_out_time', '11:00')); ?></small>
+                        <?php echo esc_html($check_out_time); ?></small>
                 </span>
             </div>
             <div class="shb-detail-item">
@@ -69,7 +73,7 @@
             <div class="shb-detail-item shb-detail-highlight">
                 <span class="shb-detail-label"><?php _e('Total', 'sanctuary-hotel-booking'); ?></span>
                 <span class="shb-detail-value shb-total-paid">
-                    <?php echo esc_html(get_option('shb_currency_symbol', '$') . number_format($booking['total_price'], 2)); ?>
+                    <?php echo esc_html($currency_symbol . number_format($booking['total_price'], 2)); ?>
                 </span>
             </div>
         </div>
@@ -131,7 +135,7 @@
                     <div class="shb-bank-detail-item shb-bank-amount">
                         <span class="shb-bank-label"><?php _e('Amount to Transfer', 'sanctuary-hotel-booking'); ?></span>
                         <span
-                            class="shb-bank-value shb-amount-value"><?php echo esc_html(get_option('shb_currency_symbol', '$') . number_format($booking['total_price'], 2)); ?></span>
+                            class="shb-bank-value shb-amount-value"><?php echo esc_html($currency_symbol . number_format($booking['total_price'], 2)); ?></span>
                     </div>
                 </div>
             </div>

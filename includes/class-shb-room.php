@@ -29,6 +29,17 @@ class SHB_Room
         );
 
         $args = wp_parse_args($args, $defaults);
+
+        // Support filtering by location.
+        if (!empty($args['location_id'])) {
+            $location_id = absint($args['location_id']);
+            unset($args['location_id']);
+            $args['meta_query'][] = array(
+                'key' => '_shb_location_id',
+                'value' => $location_id,
+            );
+        }
+
         $rooms = get_posts($args);
 
         return array_map(array(__CLASS__, 'format_room'), $rooms);
@@ -54,12 +65,18 @@ class SHB_Room
         $room_id = is_object($post) ? $post->ID : $post;
         $post = get_post($room_id);
 
+        $location_id = absint(get_post_meta($post->ID, '_shb_location_id', true));
+        $location = $location_id ? SHB_Location::get_location($location_id) : null;
+
         return array(
             'id' => $post->ID,
             'name' => $post->post_title,
             'description' => $post->post_content,
             'excerpt' => $post->post_excerpt,
             'room_type' => get_post_meta($post->ID, '_shb_room_type', true) ?: 'standard',
+            'location_id' => $location_id,
+            'location_name' => $location ? $location['name'] : '',
+            'location' => $location,
             'base_price' => floatval(get_post_meta($post->ID, '_shb_base_price', true)),
             'max_guests' => intval(get_post_meta($post->ID, '_shb_max_guests', true)) ?: 2,
             'amenities' => get_post_meta($post->ID, '_shb_amenities', true) ?: array(),
@@ -116,9 +133,14 @@ class SHB_Room
     /**
      * Search available rooms
      */
-    public static function search_available_rooms($check_in, $check_out, $guests = 1)
+    public static function search_available_rooms($check_in, $check_out, $guests = 1, $location_id = 0)
     {
-        $all_rooms = self::get_rooms();
+        $args = array();
+        if ($location_id) {
+            $args['location_id'] = absint($location_id);
+        }
+
+        $all_rooms = self::get_rooms($args);
         $available_rooms = array();
 
         foreach ($all_rooms as $room) {

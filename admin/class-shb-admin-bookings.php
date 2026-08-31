@@ -25,8 +25,14 @@ class SHB_Admin_Bookings
             );
         }
 
+        $location_filter = isset($_GET['location']) ? absint($_GET['location']) : 0;
+        if ($location_filter) {
+            $args['location_id'] = $location_filter;
+        }
+
         $bookings = SHB_Booking::get_bookings($args);
         $rooms = SHB_Room::get_rooms(array('meta_query' => array()));
+        $locations = SHB_Location::get_locations();
 
         // Build room color map
         $room_colors = array();

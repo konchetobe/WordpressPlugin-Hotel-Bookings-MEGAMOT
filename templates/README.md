@@ -6,15 +6,20 @@ This directory contains PHP template files for frontend display.
 
 | File | Shortcode | Variables Available |
 |------|-----------|---------------------|
-| `booking-form.php` | `[shb_booking_form]` | `$room`, `$user`, `$dates` |
-| `booking-confirmation.php` | `[shb_booking_confirmation]` | `$booking` |
+| `booking-form.php` | `[shb_booking_form]` | `$room`, `$user`, `$dates`, `$room_id`, `$check_in`, `$check_out`, `$guests`, `$prefill`, `$blocked_dates` |
+| `booking-confirmation.php` | `[shb_booking_confirmation]` | `$booking`, `$location`, `$check_in_time`, `$check_out_time`, `$currency_symbol` |
 | `room-card.php` | (partial) | `$room`, `$dates`, `$price` |
-| `room-search.php` | `[shb_room_search]` | - |
+| `room-search.php` | `[shb_room_search]` | `$locations`, `$location` |
+| `room-list.php` | `[shb_room_list]` | `$rooms`, `$atts` |
 | `my-bookings.php` | `[shb_my_bookings]` | `$bookings` |
 
 `$booking` and each item in `$bookings` include `calendar_token`. Confirmation
 pages require it as `booking_token`; calendar download links must send it as
 `shb_calendar_token`. Do not expose ID-only or reference-only booking URLs.
+
+Rooms include `location_id`, `location_name`, and a nested `location` array
+(from `SHB_Location::format_location()`). `room-search.php` renders a location
+selector when more than one active location exists.
 
 ## Template Loading
 
@@ -39,6 +44,7 @@ return ob_get_clean();
 | `.shb-payment-option` | Payment method radio option |
 | `.shb-booking-confirmation` | Confirmation page container |
 | `.shb-bank-transfer-details` | Bank transfer info card |
+| `.shb-room-location` | Location name shown on cards/forms |
 
 ## Common Tasks
 

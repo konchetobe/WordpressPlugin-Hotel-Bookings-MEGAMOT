@@ -90,7 +90,24 @@
             $form[0].reset();
             $('#rule_id').val('');
             $('#shb-rule-form-title').text('Add Pricing Rule');
+            $('#rule_scope').val('');
+            $('#rule_scope_location_wrap, #rule_scope_room_type_wrap, #rule_scope_room_wrap').hide();
             $modal.fadeIn(200);
+        });
+        
+        // Scope selector toggles the dependent dropdowns
+        $(document).on('change', '#rule_scope', function() {
+            var scope = $(this).val();
+            $('#rule_scope_location_wrap, #rule_scope_room_type_wrap, #rule_scope_room_wrap').hide();
+            if (scope === 'location' || scope === 'room_type') {
+                $('#rule_scope_location_wrap').show();
+            }
+            if (scope === 'room_type') {
+                $('#rule_scope_room_type_wrap').show();
+            }
+            if (scope === 'room') {
+                $('#rule_scope_room_wrap').show();
+            }
         });
         
         // Open modal for edit
@@ -107,6 +124,16 @@
             $('#rule_end_date').val(rule.end_date || '');
             $('#rule_multiplier').val(rule.multiplier);
             $('#rule_is_active').prop('checked', rule.is_active == 1);
+            
+            var scope = '';
+            if (rule.room_id) { scope = 'room'; }
+            else if (rule.room_type_term_id) { scope = 'room_type'; }
+            else if (rule.location_id) { scope = 'location'; }
+            $('#rule_scope').val(scope).trigger('change');
+            $('#rule_location_id').val(rule.location_id || '');
+            $('#rule_room_type_term').val(rule.room_type_term_id || '');
+            $('#rule_room_id').val(rule.room_id || '');
+            
             $('#shb-rule-form-title').text('Edit Pricing Rule');
             $modal.fadeIn(200);
         });
@@ -139,6 +166,9 @@
                     name: $('#rule_name').val(),
                     rule_type: $('#rule_type').val(),
                     room_type: $('#rule_room_type').val(),
+                    location_id: $('#rule_location_id').val(),
+                    room_id: $('#rule_room_id').val(),
+                    room_type_term_id: $('#rule_room_type_term').val(),
                     start_date: $('#rule_start_date').val(),
                     end_date: $('#rule_end_date').val(),
                     multiplier: $('#rule_multiplier').val(),

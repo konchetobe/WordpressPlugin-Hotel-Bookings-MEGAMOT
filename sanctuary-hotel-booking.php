@@ -3,7 +3,7 @@
  * Plugin Name: Sanctuary Hotel Booking
  * Plugin URI: https://example.com/sanctuary-hotel-booking
  * Description: A comprehensive hotel/guest house booking reservation system with Stripe/PayPal payments and calendar event generation.
- * Version: 1.3.1
+ * Version: 1.4.0-beta.1
  * Author: Sanctuary Hotels
  * Author URI: https://example.com
  * License: GPL v2 or later
@@ -18,8 +18,8 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('SHB_VERSION', '1.3.1');
-define('SHB_DB_VERSION', '1.3.1');
+define('SHB_VERSION', '1.4.0-beta.1');
+define('SHB_DB_VERSION', '1.4.0-beta.1');
 define('SHB_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SHB_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('SHB_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -52,10 +52,14 @@ class Sanctuary_Hotel_Booking
         // Core includes
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-post-types.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-database.php';
+        require_once SHB_PLUGIN_DIR . 'includes/class-shb-location.php';
+        require_once SHB_PLUGIN_DIR . 'includes/class-shb-migration.php';
+        require_once SHB_PLUGIN_DIR . 'includes/class-shb-roles.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-room.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-booking.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-pricing.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-availability.php';
+        require_once SHB_PLUGIN_DIR . 'includes/class-shb-room-nights.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-calendar.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-payments.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-shortcodes.php';
@@ -73,6 +77,8 @@ class Sanctuary_Hotel_Booking
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-settings.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-bookings.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-pricing.php';
+            require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-migration.php';
+            require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-reports.php';
         }
 
         // Public includes
@@ -119,6 +125,12 @@ class Sanctuary_Hotel_Booking
         add_action('init', array('SHB_Post_Types', 'register_post_types'), 0);
         add_action('init', array('SHB_Post_Types', 'register_taxonomies'), 0);
 
+        // Stripe webhook endpoint
+        add_action('rest_api_init', array('SHB_Payments', 'register_rest_routes'));
+
+        // Expired hold cleanup (scheduled hourly on activation)
+        add_action('shb_cleanup_expired_holds', array('SHB_Room_Nights', 'clear_expired_holds'));
+
         // Initialize other components after post types
         add_action('init', array($this, 'init'), 10);
         add_action('plugins_loaded', array($this, 'load_textdomain'));
@@ -164,6 +176,11 @@ class Sanctuary_Hotel_Booking
         SHB_Post_Types::register_post_types();
         SHB_Post_Types::register_taxonomies();
 
+        // Register roles and capabilities
+        if (class_exists('SHB_Roles')) {
+            SHB_Roles::register();
+        }
+
         // Flush rewrite rules
         flush_rewrite_rules();
 
@@ -172,10 +189,18 @@ class Sanctuary_Hotel_Booking
 
         // Create sample data
         $this->create_sample_data();
+
+        // Schedule hold cleanup cron
+        if (!wp_next_scheduled('shb_cleanup_expired_holds')) {
+            wp_schedule_event(time(), 'hourly', 'shb_cleanup_expired_holds');
+        }
     }
 
     public function deactivate()
     {
+        // Clear hold cleanup cron
+        wp_clear_scheduled_hook('shb_cleanup_expired_holds');
+
         flush_rewrite_rules();
     }
 
@@ -259,6 +284,11 @@ class Sanctuary_Hotel_Booking
             return;
         }
 
+        $location_id = 0;
+        if (class_exists('SHB_Location')) {
+            $location_id = SHB_Location::get_default_location_id();
+        }
+
         // Create sample rooms
         $rooms = array(
             array(
@@ -296,6 +326,9 @@ class Sanctuary_Hotel_Booking
             ));
 
             if ($post_id && !is_wp_error($post_id)) {
+                if ($location_id) {
+                    update_post_meta($post_id, '_shb_location_id', $location_id);
+                }
                 update_post_meta($post_id, '_shb_room_type', $room_data['room_type']);
                 update_post_meta($post_id, '_shb_base_price', $room_data['base_price']);
                 update_post_meta($post_id, '_shb_max_guests', $room_data['max_guests']);

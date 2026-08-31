@@ -19,6 +19,14 @@
         <?php if ($view !== 'calendar'): ?>
             <form method="get" action="" class="shb-filter-inline">
                 <input type="hidden" name="page" value="shb-bookings">
+                <select name="location">
+                    <option value="0"><?php _e('All Locations', 'sanctuary-hotel-booking'); ?></option>
+                    <?php foreach ($locations as $loc): ?>
+                        <option value="<?php echo esc_attr($loc['id']); ?>" <?php selected($location_filter, $loc['id']); ?>>
+                            <?php echo esc_html($loc['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
                 <select name="status">
                     <option value=""><?php _e('All Statuses', 'sanctuary-hotel-booking'); ?></option>
                     <option value="pending" <?php selected($status_filter, 'pending'); ?>>
@@ -261,6 +269,7 @@
                         <th><?php _e('Reference', 'sanctuary-hotel-booking'); ?></th>
                         <th><?php _e('Guest', 'sanctuary-hotel-booking'); ?></th>
                         <th><?php _e('Room', 'sanctuary-hotel-booking'); ?></th>
+                        <th><?php _e('Location', 'sanctuary-hotel-booking'); ?></th>
                         <th><?php _e('Dates', 'sanctuary-hotel-booking'); ?></th>
                         <th><?php _e('Guests', 'sanctuary-hotel-booking'); ?></th>
                         <th><?php _e('Total', 'sanctuary-hotel-booking'); ?></th>
@@ -283,6 +292,7 @@
                                 <small><?php echo esc_html($booking['email']); ?></small>
                             </td>
                             <td><?php echo esc_html($booking['room_name']); ?></td>
+                            <td><?php echo esc_html($booking['location_name'] ?: '—'); ?></td>
                             <td>
                                 <?php echo esc_html($booking['check_in']); ?><br>
                                 <?php echo esc_html($booking['check_out']); ?>

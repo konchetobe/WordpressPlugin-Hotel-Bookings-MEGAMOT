@@ -10,21 +10,49 @@ if (!defined('ABSPATH')) {
 class SHB_Database {
 
     /**
+     * Registry of versioned migrations: DB version => callable.
+     *
+     * @return array
+     */
+    public static function get_migrations() {
+        return array(
+            '1.4.0-beta.1' => array('SHB_Migration', 'run'),
+        );
+    }
+
+    /**
      * Apply schema changes when the plugin version changes.
      */
     public static function maybe_upgrade() {
-        if (get_option('shb_db_version') === SHB_DB_VERSION) {
-            return;
+        $current_version = get_option('shb_db_version', '');
+
+        // Fresh installs run the base schema; the migration pass then fills data.
+        if ($current_version === '') {
+            self::create_tables();
+        } else {
+            self::create_tables();
         }
 
-        self::create_tables();
+        // Run any pending migrations in version order.
+        $migrations = self::get_migrations();
+        uksort($migrations, 'version_compare');
+
+        foreach ($migrations as $version => $callback) {
+            if (version_compare($version, $current_version, '>')) {
+                if (is_callable($callback)) {
+                    call_user_func($callback);
+                }
+                update_option('shb_db_version', $version);
+                $current_version = $version;
+            }
+        }
     }
-    
+
     public static function create_tables() {
         global $wpdb;
-        
+
         $charset_collate = $wpdb->get_charset_collate();
-        
+
         // Pricing Rules Table
         $table_pricing = $wpdb->prefix . 'shb_pricing_rules';
         $sql_pricing = "CREATE TABLE $table_pricing (
@@ -32,15 +60,19 @@ class SHB_Database {
             name varchar(255) NOT NULL,
             rule_type varchar(50) NOT NULL,
             room_type varchar(50) DEFAULT NULL,
+            location_id bigint(20) DEFAULT NULL,
+            room_id bigint(20) DEFAULT NULL,
+            room_type_term_id bigint(20) DEFAULT NULL,
             start_date date DEFAULT NULL,
             end_date date DEFAULT NULL,
             multiplier decimal(5,2) NOT NULL DEFAULT 1.00,
             is_active tinyint(1) NOT NULL DEFAULT 1,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            KEY active_type_dates (is_active, room_type, start_date, end_date)
+            KEY active_type_dates (is_active, room_type, start_date, end_date),
+            KEY scope_active (location_id, room_id, room_type_term_id, is_active)
         ) $charset_collate;";
-        
+
         // Availability Blocks Table
         $table_availability = $wpdb->prefix . 'shb_availability_blocks';
         $sql_availability = "CREATE TABLE $table_availability (
@@ -54,7 +86,7 @@ class SHB_Database {
             KEY room_id (room_id),
             KEY room_dates (room_id, start_date, end_date)
         ) $charset_collate;";
-        
+
         // Payment Transactions Table
         $table_payments = $wpdb->prefix . 'shb_payment_transactions';
         $sql_payments = "CREATE TABLE $table_payments (
@@ -71,28 +103,45 @@ class SHB_Database {
             KEY booking_id (booking_id),
             KEY session_id (session_id)
         ) $charset_collate;";
-        
+
+        // Room Nights Allocation Table (one row per occupied night)
+        $table_nights = $wpdb->prefix . 'shb_room_nights';
+        $sql_nights = "CREATE TABLE $table_nights (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            room_id bigint(20) unsigned NOT NULL,
+            location_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            booking_id bigint(20) unsigned NOT NULL,
+            stay_date date NOT NULL,
+            hold_expires_at datetime DEFAULT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY room_stay (room_id, stay_date),
+            KEY location_stay (location_id, stay_date),
+            KEY booking_id (booking_id)
+        ) $charset_collate;";
+
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql_pricing);
         dbDelta($sql_availability);
         dbDelta($sql_payments);
+        dbDelta($sql_nights);
 
         update_option('shb_db_version', SHB_DB_VERSION);
-        
+
         // Insert default pricing rules
         self::insert_default_pricing_rules();
     }
-    
+
     private static function insert_default_pricing_rules() {
         global $wpdb;
         $table = $wpdb->prefix . 'shb_pricing_rules';
-        
+
         // Check if rules exist
         $count = $wpdb->get_var("SELECT COUNT(*) FROM $table");
         if ($count > 0) {
             return;
         }
-        
+
         // Insert default rules
         $wpdb->insert($table, array(
             'name' => 'Weekend Premium',
@@ -100,7 +149,7 @@ class SHB_Database {
             'multiplier' => 1.20,
             'is_active' => 1,
         ));
-        
+
         $wpdb->insert($table, array(
             'name' => 'Early Bird Discount',
             'rule_type' => 'early_bird',

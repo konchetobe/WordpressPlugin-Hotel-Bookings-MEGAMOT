@@ -10,6 +10,12 @@ if (!defined('ABSPATH')) {
 class SHB_Admin {
     
     public static function init() {
+        // Ensure plugin caps exist on every load (idempotent) so menus
+        // remain visible for admins and location managers after upgrades.
+        if (class_exists('SHB_Roles')) {
+            SHB_Roles::register();
+        }
+
         add_action('admin_menu', array(__CLASS__, 'add_admin_menu'));
         add_action('add_meta_boxes', array(__CLASS__, 'add_meta_boxes'));
         add_action('save_post_shb_room', array(__CLASS__, 'save_room_meta'), 10, 2);
@@ -18,8 +24,74 @@ class SHB_Admin {
         add_filter('manage_shb_room_posts_columns', array(__CLASS__, 'add_room_columns'));
         add_action('manage_shb_room_posts_custom_column', array(__CLASS__, 'render_room_columns'), 10, 2);
         
+        // Room list location filter
+        add_action('restrict_manage_posts', array(__CLASS__, 'add_room_location_filter'), 10, 2);
+        add_filter('parse_query', array(__CLASS__, 'apply_room_location_filter'));
+        
         // Fix parent menu highlight for taxonomy page
         add_filter('parent_file', array(__CLASS__, 'fix_taxonomy_parent_menu'));
+    }
+
+    /**
+     * Add a location filter dropdown above the rooms list.
+     */
+    public static function add_room_location_filter($post_type, $which) {
+        if ($post_type !== 'shb_room') {
+            return;
+        }
+
+        $locations = SHB_Location::get_locations();
+        if (empty($locations)) {
+            return;
+        }
+
+        $current = isset($_GET['shb_location_id']) ? absint($_GET['shb_location_id']) : 0;
+
+        echo '<select name="shb_location_id">';
+        echo '<option value="0">' . esc_html__('All Locations', 'sanctuary-hotel-booking') . '</option>';
+        foreach ($locations as $location) {
+            printf(
+                '<option value="%d" %s>%s</option>',
+                esc_attr($location['id']),
+                selected($current, $location['id'], false),
+                esc_html($location['name'])
+            );
+        }
+        echo '</select>';
+    }
+
+    /**
+     * Apply the location filter to the rooms list query.
+     */
+    public static function apply_room_location_filter($query) {
+        global $pagenow;
+
+        if (!is_admin() || $pagenow !== 'edit.php' || !isset($_GET['shb_location_id'])) {
+            return $query;
+        }
+
+        $location_id = absint($_GET['shb_location_id']);
+        if (!$location_id) {
+            return $query;
+        }
+
+        if ($query->get('post_type') !== 'shb_room') {
+            return $query;
+        }
+
+        $meta_query = $query->get('meta_query');
+        if (!is_array($meta_query)) {
+            $meta_query = array();
+        }
+
+        $meta_query[] = array(
+            'key' => '_shb_location_id',
+            'value' => $location_id,
+        );
+
+        $query->set('meta_query', $meta_query);
+
+        return $query;
     }
     
     /**
@@ -38,10 +110,14 @@ class SHB_Admin {
      */
     public static function add_admin_menu() {
         // Main menu
+        $main_cap = current_user_can('manage_options') || current_user_can('shb_manage_bookings') || current_user_can('shb_manage_rooms')
+            ? 'shb_manage_bookings'
+            : 'manage_options';
+
         add_menu_page(
             __('Hotel Booking', 'sanctuary-hotel-booking'),
             __('Hotel Booking', 'sanctuary-hotel-booking'),
-            'manage_options',
+            $main_cap,
             'sanctuary-hotel-booking',
             array(__CLASS__, 'dashboard_page'),
             'dashicons-calendar-alt',
@@ -53,7 +129,7 @@ class SHB_Admin {
             'sanctuary-hotel-booking',
             __('Dashboard', 'sanctuary-hotel-booking'),
             __('Dashboard', 'sanctuary-hotel-booking'),
-            'manage_options',
+            $main_cap,
             'sanctuary-hotel-booking',
             array(__CLASS__, 'dashboard_page')
         );
@@ -66,13 +142,23 @@ class SHB_Admin {
             'manage_options',
             'edit-tags.php?taxonomy=shb_room_type&post_type=shb_room'
         );
+
+        // Locations submenu
+        add_submenu_page(
+            'sanctuary-hotel-booking',
+            __('Locations', 'sanctuary-hotel-booking'),
+            __('Locations', 'sanctuary-hotel-booking'),
+            'manage_options',
+            'shb-locations',
+            array('SHB_Admin_Locations', 'render_page')
+        );
         
         // Bookings submenu
         add_submenu_page(
             'sanctuary-hotel-booking',
             __('Bookings', 'sanctuary-hotel-booking'),
             __('Bookings', 'sanctuary-hotel-booking'),
-            'manage_options',
+            'shb_manage_bookings',
             'shb-bookings',
             array('SHB_Admin_Bookings', 'render_page')
         );
@@ -106,6 +192,26 @@ class SHB_Admin {
             'shb-settings',
             array('SHB_Admin_Settings', 'render_page')
         );
+
+        // Migration Report submenu
+        add_submenu_page(
+            'sanctuary-hotel-booking',
+            __('Migration', 'sanctuary-hotel-booking'),
+            __('Migration', 'sanctuary-hotel-booking'),
+            'manage_options',
+            'shb-migration',
+            array('SHB_Admin_Migration', 'render_page')
+        );
+
+        // Reports submenu
+        add_submenu_page(
+            'sanctuary-hotel-booking',
+            __('Reports', 'sanctuary-hotel-booking'),
+            __('Reports', 'sanctuary-hotel-booking'),
+            'shb_view_reports',
+            'shb-reports',
+            array('SHB_Admin_Reports', 'render_page')
+        );
     }
     
     /**
@@ -121,6 +227,7 @@ class SHB_Admin {
                 $new_columns[$key] = $value;
                 $new_columns['room_id_col'] = __('ID / Shortcode', 'sanctuary-hotel-booking');
                 $new_columns['room_type'] = __('Type', 'sanctuary-hotel-booking');
+                $new_columns['location'] = __('Location', 'sanctuary-hotel-booking');
                 $new_columns['bed_type'] = __('Bed', 'sanctuary-hotel-booking');
                 $new_columns['base_price'] = __('Price/Night', 'sanctuary-hotel-booking');
                 $new_columns['max_guests'] = __('Max Guests', 'sanctuary-hotel-booking');
@@ -155,6 +262,17 @@ class SHB_Admin {
             case 'room_type':
                 $type = get_post_meta($post_id, '_shb_room_type', true);
                 echo esc_html(ucfirst($type ?: 'standard'));
+                break;
+            case 'location':
+                $location_id = absint(get_post_meta($post_id, '_shb_location_id', true));
+                $location = $location_id ? SHB_Location::get_location($location_id) : null;
+                if ($location) {
+                    echo '<a href="' . esc_url(admin_url('admin.php?page=shb-locations&action=edit&location_id=' . $location['id'])) . '">';
+                    echo esc_html($location['name']);
+                    echo '</a>';
+                } else {
+                    echo '<em>' . __('None', 'sanctuary-hotel-booking') . '</em>';
+                }
                 break;
             case 'bed_type':
                 $bed = get_post_meta($post_id, '_shb_bed_type', true);
@@ -216,7 +334,15 @@ class SHB_Admin {
      * Availability page
      */
     public static function availability_page() {
-        $rooms = SHB_Room::get_rooms();
+        $locations = SHB_Location::get_locations();
+
+        $args = array();
+        $location_filter = isset($_GET['location']) ? absint($_GET['location']) : 0;
+        if ($location_filter) {
+            $args['location_id'] = $location_filter;
+        }
+
+        $rooms = SHB_Room::get_rooms($args);
         $blocks = SHB_Availability::get_availability_blocks();
         
         include SHB_PLUGIN_DIR . 'admin/views/availability.php';
@@ -253,6 +379,8 @@ class SHB_Admin {
         if ($is_active === '') {
             $is_active = '1'; // Default to active
         }
+        $location_id = absint(get_post_meta($post->ID, '_shb_location_id', true));
+        $locations = SHB_Location::get_locations();
         
         include SHB_PLUGIN_DIR . 'admin/views/room-meta-box.php';
     }
@@ -288,6 +416,14 @@ class SHB_Admin {
         // Save room type
         if (isset($_POST['shb_room_type'])) {
             update_post_meta($post_id, '_shb_room_type', sanitize_text_field($_POST['shb_room_type']));
+        }
+
+        // Save location (required)
+        if (isset($_POST['shb_location_id'])) {
+            $location_id = absint($_POST['shb_location_id']);
+            if ($location_id && SHB_Location::get_location($location_id)) {
+                update_post_meta($post_id, '_shb_location_id', $location_id);
+            }
         }
         
         // Save base price

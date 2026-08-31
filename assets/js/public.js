@@ -90,6 +90,7 @@
             var checkIn = $('#shb-check-in').val();
             var checkOut = $('#shb-check-out').val();
             var guests = $('#shb-guests').val();
+            var locationId = $('#shb-location').length ? $('#shb-location').val() : 0;
 
             if (!checkIn || !checkOut) {
                 alert('Please select check-in and check-out dates.');
@@ -112,7 +113,8 @@
                     nonce: shb_ajax.nonce,
                     check_in: checkIn,
                     check_out: checkOut,
-                    guests: guests
+                    guests: guests,
+                    location_id: locationId
                 },
                 success: function (response) {
                     $('#shb-search-loading').hide();
@@ -177,8 +179,13 @@
         var bookUrl = safeUrl(shb_ajax.booking_url || room.permalink);
         var sep = bookUrl.indexOf('?') > -1 ? '&' : '?';
         bookUrl += sep + 'room_id=' + encodeURIComponent(room.id || '');
+        if (room.location_id) bookUrl += '&location=' + encodeURIComponent(room.location_id);
         if (checkIn) bookUrl += '&check_in=' + encodeURIComponent(checkIn);
         if (checkOut) bookUrl += '&check_out=' + encodeURIComponent(checkOut);
+
+        var locationLine = room.location_name
+            ? '<span class="shb-room-location">' + escapeHtml(room.location_name) + '</span>'
+            : '';
 
         return '<div class="shb-room-card" data-room-id="' + escapeHtml(room.id || '') + '">' +
             '<div class="shb-room-image">' +
@@ -188,6 +195,7 @@
             '</div>' +
             '<div class="shb-room-content">' +
             '<h3 class="shb-room-title">' + roomName + '</h3>' +
+            locationLine +
             specs +
             amenities +
             '<p class="shb-room-excerpt">' + escapeHtml(desc) + '</p>' +

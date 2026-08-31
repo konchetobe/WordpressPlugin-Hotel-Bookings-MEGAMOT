@@ -56,6 +56,25 @@
                             value="<?php echo esc_attr(get_option('shb_check_out_time', '11:00')); ?>">
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row">
+                        <label
+                            for="shb_default_location_behavior"><?php _e('Default Location Behavior', 'sanctuary-hotel-booking'); ?></label>
+                    </th>
+                    <td>
+                        <select name="shb_default_location_behavior" id="shb_default_location_behavior">
+                            <option value="all" <?php selected(get_option('shb_default_location_behavior', 'all'), 'all'); ?>>
+                                <?php _e('All active locations', 'sanctuary-hotel-booking'); ?>
+                            </option>
+                            <option value="default" <?php selected(get_option('shb_default_location_behavior'), 'default'); ?>>
+                                <?php _e('Default location only', 'sanctuary-hotel-booking'); ?>
+                            </option>
+                        </select>
+                        <p class="description">
+                            <?php _e('How shortcodes and blocks without an explicit location behave when more than one location exists.', 'sanctuary-hotel-booking'); ?>
+                        </p>
+                    </td>
+                </tr>
             </table>
         </div>
 
@@ -125,6 +144,32 @@
                     <td>
                         <input type="password" name="shb_stripe_live_secret_key" id="shb_stripe_live_secret_key"
                             value="<?php echo esc_attr(get_option('shb_stripe_live_secret_key', '')); ?>"
+                            class="regular-text">
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label
+                            for="shb_stripe_test_webhook_secret"><?php _e('Test Webhook Secret', 'sanctuary-hotel-booking'); ?></label>
+                    </th>
+                    <td>
+                        <input type="password" name="shb_stripe_test_webhook_secret" id="shb_stripe_test_webhook_secret"
+                            value="<?php echo esc_attr(get_option('shb_stripe_test_webhook_secret', '')); ?>"
+                            class="regular-text">
+                        <p class="description">
+                            <?php _e('Signing secret (whsec_...) from Stripe. Point the webhook at:', 'sanctuary-hotel-booking'); ?>
+                            <code><?php echo esc_html(rest_url(SHB_Payments::REST_NAMESPACE . '/stripe-webhook')); ?></code>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label
+                            for="shb_stripe_live_webhook_secret"><?php _e('Live Webhook Secret', 'sanctuary-hotel-booking'); ?></label>
+                    </th>
+                    <td>
+                        <input type="password" name="shb_stripe_live_webhook_secret" id="shb_stripe_live_webhook_secret"
+                            value="<?php echo esc_attr(get_option('shb_stripe_live_webhook_secret', '')); ?>"
                             class="regular-text">
                     </td>
                 </tr>

@@ -3,23 +3,31 @@
 ```
 sanctuary-hotel-booking/
 ├── sanctuary-hotel-booking.php   # Main plugin entry point
-├── CLAUDE.md                     # AI architecture guide
+├── ARCHITECTURE.md               # AI architecture guide
 ├── SKELETON.md                   # Function signatures (interfaces only)
 ├── MULTI_LOCATION_PLAN.md         # Phased multiple-location/room implementation plan
 ├── .aiignore                     # Files AI should skip
+│
+├── .github/
+│   └── workflows/
+│       └── release.yml           # Bump version + build ZIP + publish GitHub Release
 │
 ├── includes/                     # Core PHP classes
 │   ├── README.md                 # Module documentation
 │   ├── class-shb-ajax.php        # AJAX handlers
 │   ├── class-shb-availability.php # Availability logic
-│   ├── class-shb-assets.php      # CSS/JS enqueuing
 │   ├── class-shb-blocks.php      # Gutenberg blocks
-│   ├── class-shb-booking.php     # Booking CRUD
-│   ├── class-shb-emails.php      # Email sending
-│   ├── class-shb-payments.php    # Payment processing
-│   ├── class-shb-pricing.php     # Price calculations
-│   ├── class-shb-room.php        # Room CRUD
-│   ├── class-shb-shortcodes.php  # Shortcode handlers
+│   ├── class-shb-booking.php     # Booking CRUD (transactional, room nights)
+│   ├── class-shb-calendar.php    # ICS generation (location-aware)
+│   ├── class-shb-database.php    # Schema + versioned migrations
+│   ├── class-shb-location.php    # Location CRUD (shb_location CPT)
+│   ├── class-shb-migration.php   # Multi-location data migration
+│   ├── class-shb-payments.php    # Payment processing + Stripe webhook
+│   ├── class-shb-pricing.php     # Price calculations (scoped per-night)
+│   ├── class-shb-roles.php       # Location manager role + caps
+│   ├── class-shb-room.php        # Room CRUD (location-aware)
+│   ├── class-shb-room-nights.php # Per-night allocation table service
+│   ├── class-shb-shortcodes.php  # Shortcode handlers (location-aware)
 │   └── class-shb-update-checker.php # GitHub Release update integration
 │
 ├── lib/
@@ -28,19 +36,31 @@ sanctuary-hotel-booking/
 ├── admin/                        # Admin-only code
 │   ├── README.md                 # Module documentation
 │   ├── class-shb-admin.php       # Admin menus/pages
+│   ├── class-shb-admin-bookings.php # Bookings page
+│   ├── class-shb-admin-locations.php # Locations CRUD
+│   ├── class-shb-admin-migration.php # Migration report
+│   ├── class-shb-admin-pricing.php   # Pricing rules page
+│   ├── class-shb-admin-reports.php   # Occupancy/revenue reports
 │   ├── class-shb-admin-settings.php # Settings management
 │   └── views/                    # Admin HTML templates
-│       ├── dashboard.php
-│       ├── settings.php
+│       ├── availability.php
 │       ├── bookings.php
-│       └── rooms.php
+│       ├── dashboard.php
+│       ├── location-edit.php
+│       ├── locations.php
+│       ├── migration.php
+│       ├── pricing.php
+│       ├── reports.php
+│       ├── room-meta-box.php
+│       └── settings.php
 │
 ├── templates/                    # Frontend templates
 │   ├── README.md                 # Module documentation
-│   ├── booking-form.php          # Booking form
-│   ├── booking-confirmation.php  # Confirmation page
+│   ├── booking-form.php          # Booking form (location-aware)
+│   ├── booking-confirmation.php  # Confirmation page (location-aware)
 │   ├── room-card.php             # Room display card
-│   ├── room-search.php           # Search form
+│   ├── room-list.php             # Room list (location-aware)
+│   ├── room-search.php           # Search form (location selector)
 │   └── my-bookings.php           # Customer bookings lookup
 │
 ├── assets/                       # Static assets
@@ -50,8 +70,12 @@ sanctuary-hotel-booking/
 │   │   ├── public.css            # Frontend styles
 │   │   └── blocks-editor.css     # Block editor styles
 │   └── js/
-│       ├── admin.js              # Admin JavaScript
-│       └── public.js             # Frontend JavaScript
+│       ├── admin.js              # Admin JavaScript (scoped pricing UI)
+│       └── public.js             # Frontend JavaScript (location search)
+│
+├── tests/                        # Manual verification
+│   ├── README.md                 # Test checklist
+│   └── verify.php                # WP-CLI sanity checks (wp eval-file)
 │
 ├── blocks/                       # Gutenberg block assets
 │   └── [block-specific files]
@@ -68,6 +92,10 @@ sanctuary-hotel-booking/
 | Modify booking logic | `includes/class-shb-booking.php` |
 | Change room fields | `includes/class-shb-room.php` |
 | Update payment flow | `includes/class-shb-payments.php` |
+| Manage locations | `includes/class-shb-location.php`, `admin/class-shb-admin-locations.php` |
+| Allocation / double-booking safety | `includes/class-shb-room-nights.php` |
+| Run the migration | `includes/class-shb-migration.php` |
+| Release a new version | `.github/workflows/release.yml` (manual dispatch) |
 | Edit booking form UI | `templates/booking-form.php` |
 | Change admin settings | `admin/class-shb-admin-settings.php` |
 | Modify frontend styles | `assets/css/public.css` |

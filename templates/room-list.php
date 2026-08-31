@@ -22,6 +22,9 @@
                     </div>
                     <div class="shb-room-content">
                         <h3 class="shb-room-title"><?php echo esc_html($room['name']); ?></h3>
+                        <?php if (!empty($room['location_name'])): ?>
+                            <span class="shb-room-location"><?php echo esc_html($room['location_name']); ?></span>
+                        <?php endif; ?>
                         
                         <div class="shb-room-specs">
                             <span class="shb-spec" title="<?php _e('Max Guests', 'sanctuary-hotel-booking'); ?>">

@@ -10,6 +10,29 @@
         <table class="form-table">
             <tr>
                 <th scope="row">
+                    <label for="shb_location_id"><?php _e('Location', 'sanctuary-hotel-booking'); ?> *</label>
+                </th>
+                <td>
+                    <select name="shb_location_id" id="shb_location_id" class="regular-text" required>
+                        <option value=""><?php _e('Select Location', 'sanctuary-hotel-booking'); ?></option>
+                        <?php foreach ($locations as $loc): ?>
+                            <option value="<?php echo esc_attr($loc['id']); ?>" <?php selected($location_id, $loc['id']); ?>>
+                                <?php echo esc_html($loc['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php if (empty($locations)): ?>
+                        <p class="description">
+                            <?php _e('No locations exist yet.', 'sanctuary-hotel-booking'); ?>
+                            <a href="<?php echo esc_url(admin_url('admin.php?page=shb-locations&action=new')); ?>">
+                                <?php _e('Create one first', 'sanctuary-hotel-booking'); ?>
+                            </a>.
+                        </p>
+                    <?php endif; ?>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
                     <label for="shb_room_type"><?php _e('Room Type', 'sanctuary-hotel-booking'); ?></label>
                 </th>
                 <td>

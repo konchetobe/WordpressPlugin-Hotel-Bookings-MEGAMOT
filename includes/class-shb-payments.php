@@ -8,6 +8,23 @@ if (!defined('ABSPATH')) {
 }
 
 class SHB_Payments {
+
+    /** How long a pending-payment hold lasts before the nightly rows are freed. */
+    const HOLD_MINUTES = 30;
+
+    /** REST namespace for payment webhooks. */
+    const REST_NAMESPACE = 'sanctuary-hotel-booking/v1';
+
+    /**
+     * Register the Stripe webhook REST route.
+     */
+    public static function register_rest_routes() {
+        register_rest_route(self::REST_NAMESPACE, '/stripe-webhook', array(
+            'methods' => 'POST',
+            'callback' => array(__CLASS__, 'handle_stripe_webhook'),
+            'permission_callback' => '__return_true', // Signature-verified below.
+        ));
+    }
     
     /**
      * Create Stripe checkout session
@@ -83,6 +100,11 @@ class SHB_Payments {
         // Save session ID to booking
         update_post_meta($booking_id, '_shb_stripe_session_id', $body['id']);
         
+        // Set an expiring hold on the claimed nights (30 minutes).
+        $hold_expires_at = gmdate('Y-m-d H:i:s', time() + self::HOLD_MINUTES * MINUTE_IN_SECONDS);
+        update_post_meta($booking_id, '_shb_hold_expires_at', $hold_expires_at);
+        SHB_Room_Nights::set_hold_expiry($booking_id, $hold_expires_at);
+        
         // Create payment transaction record
         self::create_payment_transaction($booking_id, array(
             'session_id' => $body['id'],
@@ -134,7 +156,129 @@ class SHB_Payments {
     }
     
     /**
-     * Handle successful payment
+     * Handle the Stripe webhook. This is the source of truth for payments;
+     * redirect callbacks only surface the current status for UX.
+     */
+    public static function handle_stripe_webhook($request) {
+        $payload = $request->get_body();
+        $signature = $request->get_header('stripe_signature');
+
+        if (empty($payload) || empty($signature)) {
+            return new WP_REST_Response(array('error' => 'missing payload or signature'), 400);
+        }
+
+        $event = self::verify_webhook_signature($payload, $signature);
+        if (is_wp_error($event)) {
+            return new WP_REST_Response(array('error' => $event->get_error_message()), 400);
+        }
+
+        if ($event['type'] !== 'checkout.session.completed') {
+            return new WP_REST_Response(array('received' => $event['type']), 200);
+        }
+
+        $session = $event['data']['object'] ?? array();
+        $booking_id = absint($session['metadata']['booking_id'] ?? 0);
+        $session_id = sanitize_text_field($session['id'] ?? '');
+
+        if (!$booking_id || !$session_id) {
+            return new WP_REST_Response(array('error' => 'session metadata missing booking_id'), 400);
+        }
+
+        if (($session['payment_status'] ?? '') === 'paid') {
+            $result = self::confirm_from_webhook($booking_id, $session_id);
+            if (is_wp_error($result)) {
+                return new WP_REST_Response(array('error' => $result->get_error_message()), 400);
+            }
+        }
+
+        return new WP_REST_Response(array('received' => true), 200);
+    }
+
+    /**
+     * Verify the Stripe webhook signature (t=...,v1= HMAC-SHA256).
+     */
+    private static function verify_webhook_signature($payload, $header) {
+        $test_mode = get_option('shb_stripe_test_mode', '1') === '1';
+        $secret = $test_mode
+            ? get_option('shb_stripe_test_webhook_secret', '')
+            : get_option('shb_stripe_live_webhook_secret', '');
+
+        if (empty($secret)) {
+            return new WP_Error('no_webhook_secret', 'Stripe webhook secret not configured');
+        }
+
+        $parts = explode(',', $header);
+        $timestamp = 0;
+        $signatures = array();
+
+        foreach ($parts as $part) {
+            $kv = explode('=', trim($part), 2);
+            if (count($kv) !== 2) {
+                continue;
+            }
+            if ($kv[0] === 't') {
+                $timestamp = intval($kv[1]);
+            } elseif ($kv[0] === 'v1') {
+                $signatures[] = $kv[1];
+            }
+        }
+
+        if (!$timestamp || empty($signatures)) {
+            return new WP_Error('invalid_signature', 'Malformed Stripe signature header');
+        }
+
+        // Reject signatures older than 5 minutes.
+        if (abs(time() - $timestamp) > 5 * MINUTE_IN_SECONDS) {
+            return new WP_Error('stale_signature', 'Stripe signature timestamp too old');
+        }
+
+        $signed_payload = $timestamp . '.' . $payload;
+        $expected = hash_hmac('sha256', $signed_payload, $secret);
+
+        foreach ($signatures as $signature) {
+            if (hash_equals($expected, $signature)) {
+                $event = json_decode($payload, true);
+                if (is_array($event) && !empty($event['type'])) {
+                    return $event;
+                }
+                return new WP_Error('invalid_payload', 'Payload is not a valid Stripe event');
+            }
+        }
+
+        return new WP_Error('invalid_signature', 'Stripe signature verification failed');
+    }
+
+    /**
+     * Confirm a booking from a verified webhook event.
+     * Clears the hold and marks the booking paid/confirmed.
+     */
+    private static function confirm_from_webhook($booking_id, $session_id) {
+        $booking = SHB_Booking::get_booking($booking_id);
+        if (!$booking) {
+            return new WP_Error('invalid_booking', 'Booking not found');
+        }
+
+        if (empty($booking['stripe_session_id']) || !hash_equals($booking['stripe_session_id'], $session_id)) {
+            return new WP_Error('invalid_session', 'Payment session does not belong to this booking');
+        }
+
+        if ($booking['payment_status'] === 'paid') {
+            return true;
+        }
+
+        // Clear the hold: the nights are now paid for.
+        delete_post_meta($booking_id, '_shb_hold_expires_at');
+        SHB_Room_Nights::set_hold_expiry($booking_id, null);
+
+        SHB_Booking::update_payment_status($booking_id, 'paid');
+        self::update_payment_transaction($session_id, 'paid');
+
+        return true;
+    }
+
+    /**
+     * Handle successful payment (redirect callback UX only).
+     * The webhook remains the source of truth for confirming the booking.
      */
     public static function handle_payment_success($booking_id, $session_id) {
         $booking_id = absint($booking_id);
@@ -148,7 +292,7 @@ class SHB_Payments {
             return new WP_Error('invalid_session', __('Payment session does not belong to this booking', 'sanctuary-hotel-booking'));
         }
 
-        // Verify payment with Stripe
+        // Verify payment with Stripe.
         $verification = self::verify_stripe_payment($session_id);
         
         if (is_wp_error($verification)) {
@@ -161,16 +305,13 @@ class SHB_Payments {
 
         if ($verification['payment_status'] === 'paid') {
             if ($booking['payment_status'] === 'paid') {
-                self::update_payment_transaction($session_id, 'paid');
                 return true;
             }
 
-            // Update booking payment status
-            SHB_Booking::update_payment_status($booking_id, 'paid');
-            
-            // Update payment transaction
+            // Reflect the paid status in the payment transaction if the
+            // webhook hasn't arrived yet, but do NOT confirm the booking here.
             self::update_payment_transaction($session_id, 'paid');
-            
+
             return true;
         }
         
