@@ -98,7 +98,13 @@
                 <tr>
                     <th><?php _e('Total', 'sanctuary-hotel-booking'); ?></th>
                     <th></th>
-                    <th><?php echo esc_html(get_option('shb_currency_symbol', '$') . number_format($total_revenue, 2)); ?></th>
+                    <th>
+                        <?php
+                        // The total mixes locations; show the viewer's default symbol.
+                        $total_symbol = !empty($locations[0]['currency_symbol']) ? $locations[0]['currency_symbol'] : get_option('shb_currency_symbol', '$');
+                        echo esc_html($total_symbol . number_format($total_revenue, 2));
+                        ?>
+                    </th>
                 </tr>
             <?php endif; ?>
         </tbody>

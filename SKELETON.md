@@ -38,6 +38,10 @@ class SHB_Location {
 }
 ```
 
+`get_locations_for_user()` returns all locations for admins and only the
+locations in `shb_assigned_location_ids` for location managers. `user_can_manage()`
+is used by admin pages and admin AJAX handlers to scope manager access.
+
 **Location Array Structure:**
 ```php
 [
@@ -136,7 +140,8 @@ class SHB_Roles {
     public static function get_capabilities(): array
     // Caps: shb_manage_locations, shb_manage_rooms, shb_manage_bookings, shb_view_reports
     
-    // Register the location manager role + admin caps (idempotent)
+    // Register the location manager role + admin caps (idempotent; adds caps
+    // to an existing role on upgrade)
     public static function register(): void
     
     // Remove plugin caps and role (deactivation)
@@ -147,6 +152,10 @@ class SHB_Roles {
 }
 ```
 
+The `shb_location_manager` role receives all four caps. Its access is scoped
+to `shb_assigned_location_ids` (user meta); see the Location-Manager Scoping
+section in `includes/README.md`.
+
 ---
 
 ## SHB_Room (includes/class-shb-room.php)
@@ -156,11 +165,14 @@ class SHB_Room {
     // Get single room by ID
     public static function get_room(int $room_id): ?array
     
-    // Get all rooms (supports location_id filter)
+    // Get all rooms (supports location_id / location_ids filter, all flag)
     public static function get_rooms(array $args = []): array
     
-    // Get rooms by type (meta fallback, then taxonomy)
+    // Get rooms by type (taxonomy term, legacy meta fallback)
     public static function get_rooms_by_type(string $room_type): array
+    
+    // Ensure a room has a canonical shb_room_type term (from meta if needed)
+    public static function sync_room_type_term(int $post_id): ?WP_Term
     
     // Search available rooms (supports location_id filter)
     public static function search_available_rooms(
@@ -181,7 +193,7 @@ class SHB_Room {
     'excerpt' => string,
     'image' => string (URL),
     'gallery' => array,
-    'room_type' => string,
+    'room_type' => string,      // canonical taxonomy slug; meta fallback
     'location_id' => int,
     'location_name' => string,
     'location' => ?array (SHB_Location format),
@@ -191,6 +203,11 @@ class SHB_Room {
     'amenities' => array,
 ]
 ```
+
+`get_rooms` args: `location_id` (int) or `location_ids` (int[]) filter on
+`_shb_location_id`; `all => true` removes the default active-room filter
+(admin screens). `room_type` meta + term are kept in sync by the room save
+handler and `sync_room_type_term()`.
 
 ---
 
@@ -208,7 +225,7 @@ class SHB_Booking {
     // Get booking by reference
     public static function get_booking_by_ref(string $booking_ref): ?array
     
-    // Get bookings list (supports location_id filter)
+    // Get bookings list (supports location_id / location_ids filter)
     public static function get_bookings(array $args = []): array
     
     // Update booking status (cancelled frees room nights)
@@ -281,6 +298,15 @@ class SHB_Availability {
         string $check_in, string $check_out, int $guests = 1
     ): array
     
+    // Get availability blocks (all, or for one room)
+    public static function get_availability_blocks(int $room_id = null): array
+    
+    // Get availability blocks belonging to a set of rooms
+    public static function get_availability_blocks_by_rooms(int[] $room_ids): array
+    
+    // Get a single availability block by ID
+    public static function get_availability_block(int $block_id): ?array
+    
     // Create availability block (closure/maintenance)
     public static function create_block(array $data): int|WP_Error
     // Data: room_id, start_date, end_date, reason
@@ -311,6 +337,7 @@ class SHB_Pricing {
     public static function get_nightly_multiplier(
         int $room_id, string $date, int $room_type_term_id = 0
     ): float
+    // Within a scope: dated rules beat always-on rules; ties break by id ASC.
     
     // Legacy multiplier (average across nights); room_id enables per-night path
     public static function get_pricing_multiplier(
@@ -386,7 +413,8 @@ class SHB_Payments {
     public static function register_rest_routes(): void
     // Route: POST /wp-json/sanctuary-hotel-booking/v1/stripe-webhook
 
-    // Create Stripe checkout session (sets a 30-minute hold)
+    // Create Stripe checkout session (sets a 30-minute hold; uses the
+    // booking's location currency)
     public static function create_stripe_checkout(int $booking_id): array|WP_Error
     // Returns: ['checkout_url' => string, 'session_id' => string]
     
@@ -395,6 +423,7 @@ class SHB_Payments {
     
     // Handle Stripe webhook (source of truth; confirms only on verified webhook)
     public static function handle_stripe_webhook(WP_REST_Request $request): WP_REST_Response
+    // Re-claims nights if the hold cleanup freed them before payment completed
     
     // Handle successful payment (redirect UX only — does NOT confirm)
     public static function handle_payment_success(int $booking_id, string $session_id): bool|WP_Error

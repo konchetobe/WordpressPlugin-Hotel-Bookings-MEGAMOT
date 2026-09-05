@@ -14,16 +14,22 @@ class SHB_Admin_Reports {
             wp_die(__('You do not have permission to view reports.', 'sanctuary-hotel-booking'));
         }
 
+        $is_admin = current_user_can('manage_options');
         $start_date = isset($_GET['start_date']) ? sanitize_text_field($_GET['start_date']) : gmdate('Y-m-d', strtotime('-30 days'));
         $end_date = isset($_GET['end_date']) ? sanitize_text_field($_GET['end_date']) : gmdate('Y-m-d');
         $location_filter = isset($_GET['location']) ? absint($_GET['location']) : 0;
+
+        // Non-admins see only their assigned locations.
+        $locations = $is_admin ? SHB_Location::get_locations() : SHB_Location::get_locations_for_user();
+        if (!$is_admin && $location_filter && !SHB_Location::user_can_manage($location_filter)) {
+            $location_filter = 0;
+        }
 
         if ($end_date < $start_date) {
             $end_date = $start_date;
         }
 
-        $locations = SHB_Location::get_locations();
-        $rooms = SHB_Room::get_rooms(array('meta_query' => array()));
+        $rooms = SHB_Room::get_rooms($is_admin ? array('meta_query' => array()) : array('all' => 1, 'location_ids' => wp_list_pluck($locations, 'id')));
         $room_map = array();
         foreach ($rooms as $room) {
             $room_map[$room['id']] = $room;
@@ -37,6 +43,11 @@ class SHB_Admin_Reports {
         foreach ($occupied as $night) {
             $lid = intval($night['location_id']);
             $rid = intval($night['room_id']);
+
+            // Skip nights outside the viewer's assigned locations.
+            if (!$is_admin && !SHB_Location::user_can_manage($lid)) {
+                continue;
+            }
             if (!isset($occupancy_by_location[$lid])) {
                 $occupancy_by_location[$lid] = 0;
             }
@@ -74,6 +85,8 @@ class SHB_Admin_Reports {
         );
         if ($location_filter) {
             $bookings_args['location_id'] = $location_filter;
+        } elseif (!$is_admin) {
+            $bookings_args['location_ids'] = wp_list_pluck($locations, 'id');
         }
 
         foreach (SHB_Booking::get_bookings($bookings_args) as $booking) {

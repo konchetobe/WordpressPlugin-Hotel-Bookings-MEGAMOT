@@ -298,6 +298,19 @@ class SHB_Booking {
             );
         }
 
+        // Support filtering by a set of locations (assigned-location scoping).
+        if (!empty($args['location_ids']) && is_array($args['location_ids'])) {
+            $location_ids = array_map('absint', $args['location_ids']);
+            unset($args['location_ids']);
+            if (!empty($location_ids)) {
+                $args['meta_query'][] = array(
+                    'key' => '_shb_location_id',
+                    'value' => $location_ids,
+                    'compare' => 'IN',
+                );
+            }
+        }
+
         $bookings = get_posts($args);
         
         return array_map(array(__CLASS__, 'format_booking'), $bookings);

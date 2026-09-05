@@ -125,10 +125,19 @@ class SHB_Shortcodes
             $location = absint($_GET['location']);
         }
 
-        // A room belongs to exactly one location; the passed location must match.
-        if ($location && $room['location_id'] && $location !== $room['location_id']) {
-            return '<p class="shb-error">' . __('That room does not belong to the selected location.', 'sanctuary-hotel-booking') . '</p>';
+        // A room belongs to exactly one location. When a location is passed but
+        // does not match, fall back to the room's own location instead of
+        // erroring — deep links from mixed-location lists can carry a stale one.
+        if ($room['location_id'] && $location && $location !== $room['location_id']) {
+            $location = $room['location_id'];
         }
+        if (!$location && $room['location_id']) {
+            $location = $room['location_id'];
+        }
+
+        // Location-specific currency for the summary (falls back to global).
+        $location_data = $location ? SHB_Location::get_location($location) : null;
+        $currency_symbol = $location_data ? $location_data['currency_symbol'] : get_option('shb_currency_symbol', '$');
 
         $check_in = isset($_GET['check_in']) ? sanitize_text_field($_GET['check_in']) : '';
         $check_out = isset($_GET['check_out']) ? sanitize_text_field($_GET['check_out']) : '';

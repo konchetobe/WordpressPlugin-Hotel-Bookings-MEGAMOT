@@ -31,11 +31,17 @@ class SHB_Roles {
                 __('Location Manager', 'sanctuary-hotel-booking'),
                 array(
                     'read' => true,
+                    'shb_manage_locations' => true,
                     'shb_manage_rooms' => true,
                     'shb_manage_bookings' => true,
                     'shb_view_reports' => true,
                 )
             );
+        } else {
+            // Ensure caps exist after upgrades for existing role installations.
+            foreach (array('shb_manage_locations', 'shb_manage_rooms', 'shb_manage_bookings', 'shb_view_reports') as $cap) {
+                $role->add_cap($cap);
+            }
         }
 
         $admin = get_role('administrator');

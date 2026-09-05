@@ -10,19 +10,27 @@ if (!defined('ABSPATH')) {
 class SHB_Admin_Locations {
 
     public static function render_page() {
-        if (!current_user_can('manage_options')) {
+        $is_admin = current_user_can('manage_options');
+
+        // Location managers can view their assigned locations but not create
+        // new ones or edit unassigned ones.
+        if (!$is_admin && !current_user_can('shb_manage_locations')) {
             wp_die(__('You do not have permission to manage locations.', 'sanctuary-hotel-booking'));
         }
 
         $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'list';
         $location_id = isset($_GET['location_id']) ? absint($_GET['location_id']) : 0;
 
+        if (($action === 'edit' || $action === 'new') && !$is_admin && !SHB_Location::user_can_manage($location_id)) {
+            wp_die(__('You do not have permission to manage this location.', 'sanctuary-hotel-booking'));
+        }
+
         if ($action === 'edit' || $action === 'new') {
             self::render_edit_page($location_id);
             return;
         }
 
-        $locations = SHB_Location::get_locations();
+        $locations = $is_admin ? SHB_Location::get_locations() : SHB_Location::get_locations_for_user();
         include SHB_PLUGIN_DIR . 'admin/views/locations.php';
     }
 
@@ -33,6 +41,12 @@ class SHB_Admin_Locations {
         if (isset($_POST['shb_save_location'])) {
             if (!wp_verify_nonce($_POST['shb_location_nonce'] ?? '', 'shb_location_save')) {
                 wp_die(__('Security check failed.', 'sanctuary-hotel-booking'));
+            }
+
+            // Location managers may only save locations assigned to them.
+            $target_id = absint($_POST['location_id'] ?? 0);
+            if (!current_user_can('manage_options') && !SHB_Location::user_can_manage($target_id)) {
+                wp_die(__('You do not have permission to manage this location.', 'sanctuary-hotel-booking'));
             }
 
             $saved = self::save_location($_POST);

@@ -62,19 +62,19 @@ class SHB_Pricing {
         
         if (null === self::$active_rules) {
             self::$active_rules = $wpdb->get_results(
-                "SELECT * FROM $table WHERE is_active = 1",
+                "SELECT * FROM $table WHERE is_active = 1 ORDER BY start_date IS NULL, start_date DESC, id ASC",
                 ARRAY_A
             );
         }
 
         $rules = self::$active_rules;
-        
+
         // 1. Room override
         $multiplier = self::resolve_rules($rules, array('room_id' => $room_id), $date);
         if (null !== $multiplier) {
             return $multiplier;
         }
-        
+
         // 2. Room type at the location
         if ($location_id && $room_type_term_id) {
             $multiplier = self::resolve_rules($rules, array('location_id' => $location_id, 'room_type_term_id' => $room_type_term_id), $date);
@@ -82,7 +82,7 @@ class SHB_Pricing {
                 return $multiplier;
             }
         }
-        
+
         // 3. Location-wide rule
         if ($location_id) {
             $multiplier = self::resolve_rules($rules, array('location_id' => $location_id), $date);
@@ -104,10 +104,12 @@ class SHB_Pricing {
     /**
      * Find the best matching rule for a scope and date.
      * Rules with date ranges must contain the date; rules without apply always.
+     * A date-specific rule wins over an always-on rule; ties break by id ASC.
      * Returns the multiplier or null when nothing matches.
      */
     private static function resolve_rules($rules, $scope, $date, $legacy_room_type = '') {
         $matched = null;
+        $matched_is_dated = false;
 
         foreach ($rules as $rule) {
             // Scope match.
@@ -136,20 +138,25 @@ class SHB_Pricing {
                 }
             }
 
-            // Date range must contain the date.
-            if (!empty($rule['start_date']) && !empty($rule['end_date'])) {
+            // Date range must contain the date. A rule with no range applies
+            // always, but is less specific than a dated rule.
+            $is_dated = !empty($rule['start_date']) && !empty($rule['end_date']);
+            if ($is_dated) {
                 if ($date < $rule['start_date'] || $date > $rule['end_date']) {
                     continue;
                 }
+            } elseif ($matched_is_dated) {
+                continue; // An always-on rule cannot beat a dated match.
             }
 
-            // First matching rule in precedence order wins; later rows can't override.
-            if (null === $matched) {
+            // Prefer dated rules over always-on, then the earliest id.
+            if (null === $matched || ($is_dated && !$matched_is_dated)) {
                 $matched = floatval($rule['multiplier']);
+                $matched_is_dated = $is_dated;
                 self::$last_applied_rule_ids[] = intval($rule['id']);
             }
         }
-        
+
         return $matched;
     }
 
@@ -179,7 +186,7 @@ class SHB_Pricing {
             
             if (null === self::$active_rules) {
                 self::$active_rules = $wpdb->get_results(
-                    "SELECT * FROM $table WHERE is_active = 1",
+                    "SELECT * FROM $table WHERE is_active = 1 ORDER BY start_date IS NULL, start_date DESC, id ASC",
                     ARRAY_A
                 );
             }

@@ -16,7 +16,10 @@
                         <img src="<?php echo esc_url($room['image']); ?>" alt="<?php echo esc_attr($room['name']); ?>" loading="lazy">
                         <span class="shb-room-type-badge"><?php echo esc_html(ucfirst($room['room_type'])); ?></span>
                         <div class="shb-room-price-tag">
-                            <span class="shb-price-amount"><?php echo esc_html(get_option('shb_currency_symbol', '$') . number_format($room['base_price'], 0)); ?></span>
+                            <span class="shb-price-amount"><?php
+                                $room_location_symbol = !empty($room['location']['currency_symbol']) ? $room['location']['currency_symbol'] : get_option('shb_currency_symbol', '$');
+                                echo esc_html($room_location_symbol . number_format($room['base_price'], 0));
+                                ?></span>
                             <span class="shb-price-unit">/<?php _e('night', 'sanctuary-hotel-booking'); ?></span>
                         </div>
                     </div>
@@ -60,7 +63,7 @@
                             <a href="<?php echo esc_url($room['permalink']); ?>" class="shb-button shb-button-outline" data-testid="view-details-<?php echo esc_attr($room['id']); ?>">
                                 <?php _e('Details', 'sanctuary-hotel-booking'); ?>
                             </a>
-                            <a href="<?php echo esc_url(Sanctuary_Hotel_Booking::get_booking_url($room['id'])); ?>" class="shb-button shb-button-primary" data-testid="book-now-<?php echo esc_attr($room['id']); ?>">
+                            <a href="<?php echo esc_url(Sanctuary_Hotel_Booking::get_booking_url($room['id'], array('location' => $room['location_id']))); ?>" class="shb-button shb-button-primary" data-testid="book-now-<?php echo esc_attr($room['id']); ?>">
                                 <?php _e('Book Now', 'sanctuary-hotel-booking'); ?>
                             </a>
                         </div>

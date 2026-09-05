@@ -4,7 +4,7 @@ Tags: hotel booking, reservation, accommodation, booking system, hotel managemen
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.4.0-beta.1
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,14 @@ Yes, go to Hotel Booking > Availability to create date blocks for any room.
 6. Settings page
 
 == Changelog ==
+
+= 1.4.0 =
+* Stable release of the multi-location booking system.
+* **Fixes** — rooms created after migration now keep their room-type term in sync so scoped pricing always matches; pricing rules resolve deterministically (dated rules beat always-on rules within a scope).
+* **Fixes** — booking links from room lists and search cards carry the room's location; the booking form falls back to the room's own location instead of erroring on a stale `location` parameter.
+* **Fixes** — Stripe checkout uses the location's currency and rounds amounts correctly; a confirmed webhook re-claims nights if the hold cleanup freed them mid-payment.
+* **Fixes** — location managers are now scoped to their assigned locations across the rooms list, bookings, availability, reports, and admin AJAX actions.
+* **Fixes** — schema work (dbDelta) no longer runs on every request; the stored DB version is finalized after upgrading from 1.4.0-beta.1.
 
 = 1.4.0-beta.1 =
 * **Multiple locations** — new `shb_location` post type with address, contact, time zone, currency, and check-in/out times.

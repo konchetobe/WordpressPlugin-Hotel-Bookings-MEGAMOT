@@ -97,45 +97,10 @@ class SHB_Migration {
 
             // Migrate legacy room-type meta to the canonical taxonomy term.
             $legacy_type = get_post_meta($room_id, '_shb_room_type', true);
-            if ($legacy_type) {
-                $term = self::ensure_room_type_term($legacy_type);
-                if ($term) {
-                    wp_set_object_terms($room_id, array($term->term_id), 'shb_room_type', false);
-                    $report['room_types_migrated']++;
-                }
+            if ($legacy_type && SHB_Room::sync_room_type_term($room_id)) {
+                $report['room_types_migrated']++;
             }
         }
-    }
-
-    /**
-     * Ensure a room-type term exists for a legacy value, returning the term.
-     */
-    private static function ensure_room_type_term($room_type) {
-        $slug = sanitize_title($room_type);
-        if (!$slug) {
-            return null;
-        }
-
-        $term = get_term_by('slug', $slug, 'shb_room_type');
-        if ($term) {
-            return $term;
-        }
-
-        // Legacy values like "standard" should match the seeded "Standard" term.
-        $existing = get_term_by('name', ucfirst($room_type), 'shb_room_type');
-        if ($existing) {
-            return $existing;
-        }
-
-        $inserted = wp_insert_term(ucfirst($room_type), 'shb_room_type', array(
-            'slug' => $slug,
-        ));
-
-        if (is_wp_error($inserted)) {
-            return null;
-        }
-
-        return get_term($inserted['term_id'], 'shb_room_type');
     }
 
     /**
@@ -158,6 +123,14 @@ class SHB_Migration {
             $check_in = get_post_meta($booking_id, '_shb_check_in', true);
             $check_out = get_post_meta($booking_id, '_shb_check_out', true);
             $status = get_post_meta($booking_id, '_shb_booking_status', true);
+
+            // Skip bookings whose room no longer exists; report for review.
+            if ($room_id && !SHB_Room::get_room($room_id)) {
+                $report['bookings_without_room'][] = array(
+                    'booking_id' => $booking_id,
+                    'room_id' => $room_id,
+                );
+            }
 
             $location_id = 0;
             if ($room_id) {
@@ -187,51 +160,43 @@ class SHB_Migration {
                 continue;
             }
 
-            if ($status === 'cancelled') {
+            if ($status === 'cancelled' || !$room_id) {
                 continue;
             }
 
             $hold_expires = get_post_meta($booking_id, '_shb_hold_expires_at', true);
             $hold_expires = $hold_expires ? $hold_expires : null;
 
-            // Detect nights already claimed by another active booking before inserting.
-            $existing = $wpdb->get_col($wpdb->prepare(
-                "SELECT stay_date FROM $table WHERE room_id = %d AND stay_date >= %s AND stay_date < %s",
+            // Claim each night. The unique (room_id, stay_date) index makes
+            // double claims impossible; any duplicate is reported, not skipped.
+            $claim = SHB_Room_Nights::claim_nights(
                 $room_id,
+                $location_id,
+                $booking_id,
                 $check_in,
-                $check_out
-            ));
-            $existing_dates = array_flip($existing);
+                $check_out,
+                $hold_expires
+            );
 
-            $inserted = 0;
-            $date = new DateTimeImmutable($check_in);
-            $end = new DateTimeImmutable($check_out);
-            for ($d = $date; $d < $end; $d = $d->modify('+1 day')) {
-                $stay_date = $d->format('Y-m-d');
-
-                if (isset($existing_dates[$stay_date])) {
+            if (is_wp_error($claim)) {
+                // Which nights conflicted?
+                $conflicts = $wpdb->get_col($wpdb->prepare(
+                    "SELECT stay_date FROM $table WHERE room_id = %d AND stay_date >= %s AND stay_date < %s",
+                    $room_id,
+                    $check_in,
+                    $check_out
+                ));
+                foreach ($conflicts as $stay_date) {
                     $report['overlapping_bookings'][] = array(
                         'booking_id' => $booking_id,
                         'room_id' => $room_id,
                         'stay_date' => $stay_date,
                     );
-                    continue;
                 }
-
-                $result = $wpdb->insert($table, array(
-                    'room_id' => $room_id,
-                    'location_id' => $location_id,
-                    'booking_id' => $booking_id,
-                    'stay_date' => $stay_date,
-                    'hold_expires_at' => $hold_expires,
-                ));
-
-                if ($result !== false) {
-                    $inserted++;
-                }
+                continue;
             }
 
-            $report['nights_backfilled'] += $inserted;
+            $report['nights_backfilled'] += $nights;
         }
     }
 }

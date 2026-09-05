@@ -40,6 +40,30 @@ class SHB_Room
             );
         }
 
+        // Support filtering by a set of locations.
+        if (!empty($args['location_ids']) && is_array($args['location_ids'])) {
+            $location_ids = array_map('absint', $args['location_ids']);
+            unset($args['location_ids']);
+            if (!empty($location_ids)) {
+                $args['meta_query'][] = array(
+                    'key' => '_shb_location_id',
+                    'value' => $location_ids,
+                    'compare' => 'IN',
+                );
+            }
+        }
+
+        // Support filtering by active status only. When $args['all'] is set,
+        // remove the default active filter (admin screens pass meta_query = []).
+        if (!empty($args['all'])) {
+            unset($args['all']);
+            $args['meta_query'] = isset($args['meta_query']) && is_array($args['meta_query'])
+                ? array_values(array_filter($args['meta_query'], function ($mq) {
+                    return !(is_array($mq) && ($mq['key'] ?? '') === '_shb_is_active');
+                }))
+                : array();
+        }
+
         $rooms = get_posts($args);
 
         return array_map(array(__CLASS__, 'format_room'), $rooms);
@@ -68,12 +92,20 @@ class SHB_Room
         $location_id = absint(get_post_meta($post->ID, '_shb_location_id', true));
         $location = $location_id ? SHB_Location::get_location($location_id) : null;
 
+        // Canonical room type is the taxonomy term, with the legacy meta as
+        // the fallback during the compatibility window.
+        $terms = get_the_terms($post->ID, 'shb_room_type');
+        $room_type = !empty($terms) ? $terms[0]->slug : '';
+        if (!$room_type) {
+            $room_type = get_post_meta($post->ID, '_shb_room_type', true) ?: 'standard';
+        }
+
         return array(
             'id' => $post->ID,
             'name' => $post->post_title,
             'description' => $post->post_content,
             'excerpt' => $post->post_excerpt,
-            'room_type' => get_post_meta($post->ID, '_shb_room_type', true) ?: 'standard',
+            'room_type' => $room_type,
             'location_id' => $location_id,
             'location_name' => $location ? $location['name'] : '',
             'location' => $location,
@@ -111,23 +143,86 @@ class SHB_Room
     }
 
     /**
-     * Get rooms by type
+     * Get active rooms by type (canonical taxonomy term, with legacy meta fallback)
      */
     public static function get_rooms_by_type($room_type)
     {
-        return self::get_rooms(array(
-            'meta_query' => array(
-                'relation' => 'AND',
+        $active_query = array(
+            array(
+                'key' => '_shb_is_active',
+                'value' => '1',
+            ),
+        );
+
+        $rooms = get_posts(array(
+            'post_type' => 'shb_room',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'tax_query' => array(
                 array(
-                    'key' => '_shb_is_active',
-                    'value' => '1',
-                ),
-                array(
-                    'key' => '_shb_room_type',
-                    'value' => $room_type,
+                    'taxonomy' => 'shb_room_type',
+                    'field' => 'slug',
+                    'terms' => sanitize_title($room_type),
                 ),
             ),
+            'meta_query' => $active_query,
         ));
+
+        if (empty($rooms)) {
+            // Legacy fallback for rooms that predate the taxonomy sync.
+            $rooms = get_posts(array(
+                'post_type' => 'shb_room',
+                'post_status' => 'publish',
+                'posts_per_page' => -1,
+                'meta_query' => array(
+                    $active_query[0],
+                    array(
+                        'key' => '_shb_room_type',
+                        'value' => $room_type,
+                    ),
+                ),
+            ));
+        }
+
+        return array_map(array(__CLASS__, 'format_room'), $rooms);
+    }
+
+    /**
+     * Ensure a room's canonical shb_room_type term matches its stored type.
+     * Returns the term object, or null when the room has no recognizable type.
+     */
+    public static function sync_room_type_term($post_id)
+    {
+        $post_id = absint($post_id);
+
+        $terms = get_the_terms($post_id, 'shb_room_type');
+        if (!empty($terms)) {
+            return $terms[0];
+        }
+
+        $meta_type = get_post_meta($post_id, '_shb_room_type', true);
+        if (!$meta_type) {
+            return null;
+        }
+
+        $slug = sanitize_title($meta_type);
+        $term = $slug ? get_term_by('slug', $slug, 'shb_room_type') : false;
+        if (!$term) {
+            $term = get_term_by('name', ucfirst($meta_type), 'shb_room_type');
+        }
+        if (!$term) {
+            $inserted = wp_insert_term(ucfirst($meta_type), 'shb_room_type', array('slug' => $slug));
+            if (is_wp_error($inserted)) {
+                return null;
+            }
+            $term = get_term($inserted['term_id'], 'shb_room_type');
+        }
+
+        if ($term) {
+            wp_set_object_terms($post_id, array((int) $term->term_id), 'shb_room_type', false);
+        }
+
+        return $term ? $term : null;
     }
 
     /**
@@ -144,6 +239,9 @@ class SHB_Room
         $available_rooms = array();
 
         foreach ($all_rooms as $room) {
+            // Make sure the room has a term so scoped pricing can match it.
+            self::sync_room_type_term($room['id']);
+
             if ($room['max_guests'] >= $guests) {
                 $is_available = SHB_Availability::check_room_availability(
                     $room['id'],

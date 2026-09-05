@@ -22,14 +22,14 @@ class SHB_Database {
 
     /**
      * Apply schema changes when the plugin version changes.
+     * create_tables()/dbDelta only runs when shb_db_version is behind — it is
+     * idempotent but touches the information schema, so avoid it per request.
      */
     public static function maybe_upgrade() {
         $current_version = get_option('shb_db_version', '');
 
-        // Fresh installs run the base schema; the migration pass then fills data.
-        if ($current_version === '') {
-            self::create_tables();
-        } else {
+        if (version_compare($current_version, SHB_DB_VERSION, '<')) {
+            // Fresh installs run the base schema; upgrades run dbDelta too.
             self::create_tables();
         }
 
@@ -45,6 +45,13 @@ class SHB_Database {
                 update_option('shb_db_version', $version);
                 $current_version = $version;
             }
+        }
+
+        // Finalize: a site that ran the 1.4.0-beta.1 migration stays behind
+        // after a stable bump (version_compare sees -beta.1 < stable). Store the
+        // plugin DB version so schema work does not repeat on every request.
+        if (version_compare($current_version, SHB_DB_VERSION, '<')) {
+            update_option('shb_db_version', SHB_DB_VERSION);
         }
     }
 

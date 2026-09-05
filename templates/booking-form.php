@@ -136,8 +136,8 @@
                 
                 <div class="shb-summary-details" id="shb-price-breakdown">
                     <div class="shb-summary-row">
-                        <span><?php echo esc_html(get_option('shb_currency_symbol', '$') . number_format($room['base_price'], 2)); ?> &times; <span id="nights-count">0</span> <?php _e('nights', 'sanctuary-hotel-booking'); ?></span>
-                        <span id="subtotal-price"><?php echo esc_html(get_option('shb_currency_symbol', '$')); ?>0.00</span>
+                        <span><?php echo esc_html($currency_symbol . number_format($room['base_price'], 2)); ?> &times; <span id="nights-count">0</span> <?php _e('nights', 'sanctuary-hotel-booking'); ?></span>
+                        <span id="subtotal-price"><?php echo esc_html($currency_symbol); ?>0.00</span>
                     </div>
                     <div class="shb-summary-row shb-adjustment" style="display: none;">
                         <span><?php _e('Price adjustment', 'sanctuary-hotel-booking'); ?></span>
@@ -145,7 +145,7 @@
                     </div>
                     <div class="shb-summary-row shb-total">
                         <span><?php _e('Total', 'sanctuary-hotel-booking'); ?></span>
-                        <span id="total-price"><?php echo esc_html(get_option('shb_currency_symbol', '$')); ?>0.00</span>
+                        <span id="total-price"><?php echo esc_html($currency_symbol); ?>0.00</span>
                     </div>
                 </div>
                 

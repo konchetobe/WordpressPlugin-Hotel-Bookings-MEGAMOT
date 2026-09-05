@@ -117,6 +117,38 @@ class SHB_Availability {
         
         return $results;
     }
+
+    /**
+     * Get availability blocks belonging to a set of rooms.
+     */
+    public static function get_availability_blocks_by_rooms($room_ids) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'shb_availability_blocks';
+
+        $room_ids = array_filter(array_map('absint', (array) $room_ids));
+        if (empty($room_ids)) {
+            return array();
+        }
+
+        $placeholders = implode(',', array_fill(0, count($room_ids), '%d'));
+        return $wpdb->get_results(
+            $wpdb->prepare("SELECT * FROM $table WHERE room_id IN ($placeholders) ORDER BY start_date ASC", $room_ids),
+            ARRAY_A
+        );
+    }
+
+    /**
+     * Get a single availability block by ID.
+     */
+    public static function get_availability_block($block_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'shb_availability_blocks';
+
+        return $wpdb->get_row(
+            $wpdb->prepare("SELECT * FROM $table WHERE id = %d", absint($block_id)),
+            ARRAY_A
+        );
+    }
     
     /**
      * Create availability block

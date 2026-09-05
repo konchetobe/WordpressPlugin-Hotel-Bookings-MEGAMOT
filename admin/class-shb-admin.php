@@ -40,7 +40,11 @@ class SHB_Admin {
             return;
         }
 
-        $locations = SHB_Location::get_locations();
+        // Non-admins only see the locations they manage.
+        $locations = current_user_can('manage_options')
+            ? SHB_Location::get_locations()
+            : SHB_Location::get_locations_for_user();
+
         if (empty($locations)) {
             return;
         }
@@ -61,17 +65,13 @@ class SHB_Admin {
     }
 
     /**
-     * Apply the location filter to the rooms list query.
+     * Apply the location filter to the rooms list query, and constrain
+     * non-admins to their assigned locations.
      */
     public static function apply_room_location_filter($query) {
         global $pagenow;
 
-        if (!is_admin() || $pagenow !== 'edit.php' || !isset($_GET['shb_location_id'])) {
-            return $query;
-        }
-
-        $location_id = absint($_GET['shb_location_id']);
-        if (!$location_id) {
+        if (!is_admin() || $pagenow !== 'edit.php') {
             return $query;
         }
 
@@ -79,15 +79,42 @@ class SHB_Admin {
             return $query;
         }
 
+        $allowed = null;
+        if (!current_user_can('manage_options') && current_user_can('shb_manage_rooms')) {
+            $allowed = SHB_Location::get_locations_for_user();
+            $allowed = wp_list_pluck($allowed, 'id');
+        }
+
+        $location_id = isset($_GET['shb_location_id']) ? absint($_GET['shb_location_id']) : 0;
+
+        // Non-admins cannot filter to a location outside their assignment.
+        if (is_array($allowed) && $location_id && !in_array($location_id, $allowed, true)) {
+            $location_id = 0;
+        }
+
         $meta_query = $query->get('meta_query');
         if (!is_array($meta_query)) {
             $meta_query = array();
         }
 
-        $meta_query[] = array(
-            'key' => '_shb_location_id',
-            'value' => $location_id,
-        );
+        if ($location_id) {
+            $meta_query[] = array(
+                'key' => '_shb_location_id',
+                'value' => $location_id,
+            );
+        } elseif (is_array($allowed) && !empty($allowed)) {
+            $meta_query[] = array(
+                'key' => '_shb_location_id',
+                'value' => $allowed,
+                'compare' => 'IN',
+            );
+        } elseif (is_array($allowed)) {
+            // Manager with no assignments sees no rooms.
+            $meta_query[] = array(
+                'key' => '_shb_location_id',
+                'value' => -1,
+            );
+        }
 
         $query->set('meta_query', $meta_query);
 
@@ -143,12 +170,14 @@ class SHB_Admin {
             'edit-tags.php?taxonomy=shb_room_type&post_type=shb_room'
         );
 
-        // Locations submenu
+        // Locations submenu: admins manage all; location managers manage the
+        // assigned locations (edit/delete restricted inside the page).
+        $locations_cap = current_user_can('manage_options') ? 'manage_options' : 'shb_manage_locations';
         add_submenu_page(
             'sanctuary-hotel-booking',
             __('Locations', 'sanctuary-hotel-booking'),
             __('Locations', 'sanctuary-hotel-booking'),
-            'manage_options',
+            $locations_cap,
             'shb-locations',
             array('SHB_Admin_Locations', 'render_page')
         );
@@ -334,16 +363,36 @@ class SHB_Admin {
      * Availability page
      */
     public static function availability_page() {
-        $locations = SHB_Location::get_locations();
+        if (!current_user_can('manage_options') && !current_user_can('shb_manage_rooms')) {
+            wp_die(__('You do not have permission to manage availability.', 'sanctuary-hotel-booking'));
+        }
+
+        $is_admin = current_user_can('manage_options');
+        $locations = $is_admin ? SHB_Location::get_locations() : SHB_Location::get_locations_for_user();
 
         $args = array();
         $location_filter = isset($_GET['location']) ? absint($_GET['location']) : 0;
+
+        // Non-admins cannot filter outside their assigned locations.
+        if (!$is_admin && $location_filter && !SHB_Location::user_can_manage($location_filter)) {
+            $location_filter = 0;
+        }
+
         if ($location_filter) {
             $args['location_id'] = $location_filter;
+        } elseif (!$is_admin) {
+            $allowed = wp_list_pluck($locations, 'id');
+            $args['location_ids'] = $allowed;
         }
 
         $rooms = SHB_Room::get_rooms($args);
-        $blocks = SHB_Availability::get_availability_blocks();
+
+        // Scope the block list to the rooms visible to this user.
+        $room_ids = wp_list_pluck($rooms, 'id');
+        $blocks = $is_admin ? SHB_Availability::get_availability_blocks() : array();
+        if (!$is_admin && !empty($room_ids)) {
+            $blocks = SHB_Availability::get_availability_blocks_by_rooms($room_ids);
+        }
         
         include SHB_PLUGIN_DIR . 'admin/views/availability.php';
     }
@@ -380,8 +429,12 @@ class SHB_Admin {
             $is_active = '1'; // Default to active
         }
         $location_id = absint(get_post_meta($post->ID, '_shb_location_id', true));
-        $locations = SHB_Location::get_locations();
-        
+
+        // Non-admins only see locations they manage (admins see all).
+        $locations = current_user_can('manage_options')
+            ? SHB_Location::get_locations()
+            : SHB_Location::get_locations_for_user();
+
         include SHB_PLUGIN_DIR . 'admin/views/room-meta-box.php';
     }
     
@@ -413,14 +466,40 @@ class SHB_Admin {
             return;
         }
         
-        // Save room type
+        // Save room type: keep the legacy meta in sync with the canonical
+        // shb_room_type term so scoped pricing always matches.
         if (isset($_POST['shb_room_type'])) {
-            update_post_meta($post_id, '_shb_room_type', sanitize_text_field($_POST['shb_room_type']));
+            $room_type = sanitize_text_field($_POST['shb_room_type']);
+            update_post_meta($post_id, '_shb_room_type', $room_type);
+
+            $term = get_term_by('slug', sanitize_title($room_type), 'shb_room_type');
+            if (!$term) {
+                $term = get_term_by('name', ucfirst($room_type), 'shb_room_type');
+            }
+            if (!$term) {
+                $inserted = wp_insert_term(ucfirst($room_type), 'shb_room_type', array('slug' => sanitize_title($room_type)));
+                if (!is_wp_error($inserted)) {
+                    $term = get_term($inserted['term_id'], 'shb_room_type');
+                }
+            }
+            if ($term) {
+                wp_set_object_terms($post_id, array((int) $term->term_id), 'shb_room_type', false);
+            }
         }
 
-        // Save location (required)
+        // Save location (required). Non-admins may only assign rooms to a
+        // location they manage, and may only edit rooms in an assigned location.
         if (isset($_POST['shb_location_id'])) {
             $location_id = absint($_POST['shb_location_id']);
+            if (!current_user_can('manage_options')) {
+                $room_location = absint(get_post_meta($post_id, '_shb_location_id', true));
+                if ($room_location && !SHB_Location::user_can_manage($room_location)) {
+                    return;
+                }
+                if ($location_id && !SHB_Location::user_can_manage($location_id)) {
+                    return;
+                }
+            }
             if ($location_id && SHB_Location::get_location($location_id)) {
                 update_post_meta($post_id, '_shb_location_id', $location_id);
             }

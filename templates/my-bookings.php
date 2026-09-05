@@ -23,7 +23,10 @@
                             </span>
                         </div>
                         <span class="shb-booking-item-price">
-                            <?php echo esc_html(get_option('shb_currency_symbol', '$') . number_format($booking['total_price'], 2)); ?>
+                            <?php
+                            $booking_location = $booking['location_id'] ? SHB_Location::get_location($booking['location_id']) : null;
+                            echo esc_html(($booking_location ? $booking_location['currency_symbol'] : get_option('shb_currency_symbol', '$')) . number_format($booking['total_price'], 2));
+                            ?>
                         </span>
                     </div>
                     <div class="shb-booking-item-body">

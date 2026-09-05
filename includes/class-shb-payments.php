@@ -34,6 +34,10 @@ class SHB_Payments {
         if (!$booking) {
             return new WP_Error('invalid_booking', __('Booking not found', 'sanctuary-hotel-booking'));
         }
+
+        // Location-specific currency, falling back to the global option.
+        $location = !empty($booking['location_id']) ? SHB_Location::get_location($booking['location_id']) : null;
+        $currency = $location && $location['currency'] ? $location['currency'] : get_option('shb_currency', 'USD');
         
         // Get Stripe keys
         $test_mode = get_option('shb_stripe_test_mode', '1') === '1';
@@ -65,7 +69,7 @@ class SHB_Payments {
             ),
             'body' => array(
                 'payment_method_types[]' => 'card',
-                'line_items[0][price_data][currency]' => strtolower(get_option('shb_currency', 'USD')),
+                'line_items[0][price_data][currency]' => strtolower($currency),
                 'line_items[0][price_data][product_data][name]' => sprintf(
                     __('Hotel Booking - %s', 'sanctuary-hotel-booking'),
                     $booking['room_name']
@@ -76,7 +80,8 @@ class SHB_Payments {
                     $booking['check_out'],
                     $booking['guests']
                 ),
-                'line_items[0][price_data][unit_amount]' => intval($booking['total_price'] * 100),
+                // Stripe uses integer minor units; round to avoid float drift.
+                'line_items[0][price_data][unit_amount]' => (int) round($booking['total_price'] * 100),
                 'line_items[0][quantity]' => 1,
                 'mode' => 'payment',
                 'success_url' => str_replace('{CHECKOUT_SESSION_ID}', '{CHECKOUT_SESSION_ID}', $success_url),
@@ -109,6 +114,7 @@ class SHB_Payments {
         self::create_payment_transaction($booking_id, array(
             'session_id' => $body['id'],
             'amount' => $booking['total_price'],
+            'currency' => $currency,
             'payment_method' => 'stripe',
             'payment_status' => 'pending',
         ));
@@ -253,6 +259,8 @@ class SHB_Payments {
      * Clears the hold and marks the booking paid/confirmed.
      */
     private static function confirm_from_webhook($booking_id, $session_id) {
+        global $wpdb;
+
         $booking = SHB_Booking::get_booking($booking_id);
         if (!$booking) {
             return new WP_Error('invalid_booking', 'Booking not found');
@@ -264,6 +272,27 @@ class SHB_Payments {
 
         if ($booking['payment_status'] === 'paid') {
             return true;
+        }
+
+        // The hourly cleanup may have freed the nights while the guest was
+        // still paying. Re-claim them atomically before confirming.
+        $has_nights = SHB_Room_Nights::get_hold_expiry($booking_id) !== null
+            || $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}shb_room_nights WHERE booking_id = %d",
+                $booking_id
+            )) > 0;
+
+        if (!$has_nights && !empty($booking['check_in']) && !empty($booking['check_out']) && $booking['room_id']) {
+            $reclaim = SHB_Room_Nights::claim_nights(
+                $booking['room_id'],
+                $booking['location_id'],
+                $booking_id,
+                $booking['check_in'],
+                $booking['check_out']
+            );
+            if (is_wp_error($reclaim)) {
+                return new WP_Error('reclaim_failed', 'Room nights were released and could not be re-claimed');
+            }
         }
 
         // Clear the hold: the nights are now paid for.
@@ -329,7 +358,7 @@ class SHB_Payments {
             'booking_id' => $booking_id,
             'session_id' => $data['session_id'],
             'amount' => $data['amount'],
-            'currency' => get_option('shb_currency', 'USD'),
+            'currency' => $data['currency'] ?? get_option('shb_currency', 'USD'),
             'payment_method' => $data['payment_method'],
             'payment_status' => $data['payment_status'],
             'metadata' => json_encode($data),

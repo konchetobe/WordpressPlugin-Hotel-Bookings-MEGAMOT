@@ -74,15 +74,37 @@ shb_location (CPT)
   `_shb_price_snapshot` so history stays correct after renames/re-pricing.
 - `shb_pricing_rules` supports `location_id`, `room_id`, `room_type_term_id`
   scope columns; precedence is room → room type @ location → location → global.
+  Within a scope, a dated rule beats an always-on rule; ties break by id ASC.
+- The canonical room type is the `shb_room_type` term. `_shb_room_type` meta is
+  kept in sync as the compatibility fallback. `SHB_Room::sync_room_type_term()`
+  creates/matches the term from the meta (used by save, sample data, search,
+  and the migration).
 
 ## Migrations
 
 `SHB_Database::get_migrations()` maps DB version → callable. `maybe_upgrade()`
-runs any migrations newer than the stored `shb_db_version`. The 1.4.0-beta.1
-migration (`SHB_Migration::run`) creates the Default location, attaches rooms,
-migrates room types to taxonomy terms, snapshots bookings, and backfills
+runs any migrations newer than the stored `shb_db_version` and only calls
+`create_tables()` (dbDelta) when the stored version is behind, so schema work
+is not repeated on every request. The 1.4.0-beta.1 migration
+(`SHB_Migration::run`) creates the Default location, attaches rooms, migrates
+room types to taxonomy terms, snapshots bookings, and backfills
 `shb_room_nights`. It never deletes data; issues are listed on the
 **Hotel Booking → Migration** page.
+
+## Location-Manager Scoping
+
+Non-admin users with the `shb_location_manager` role (caps
+`shb_manage_locations`/`shb_manage_rooms`/`shb_manage_bookings`/`shb_view_reports`)
+are restricted to their `shb_assigned_location_ids` user meta:
+
+- The room meta box location dropdown, the rooms list filter, the bookings list
+  and calendar, the availability page, and the reports page only show assigned
+  locations.
+- Admin AJAX actions (`admin_update_booking_status`,
+  `admin_create_availability_block`, `admin_delete_availability_block`,
+  `admin_send_booking_email`, `admin_get_dashboard_stats`) verify the target
+  booking/room belongs to an assigned location.
+- `SHB_Location::user_can_manage($location_id)` is the shared check.
 
 ## Common Tasks
 
@@ -90,6 +112,7 @@ migrates room types to taxonomy terms, snapshots bookings, and backfills
 1. Add hooks in `SHB_Ajax::init()`
 2. Create handler method
 3. Use `check_ajax_referer()` for security
+4. If non-admin roles can use it, scope data by `SHB_Location::user_can_manage()`
 
 ### Modify booking fields
 1. Update `SHB_Booking::create_booking()` to save new meta

@@ -3,7 +3,7 @@
  * Plugin Name: Sanctuary Hotel Booking
  * Plugin URI: https://example.com/sanctuary-hotel-booking
  * Description: A comprehensive hotel/guest house booking reservation system with Stripe/PayPal payments and calendar event generation.
- * Version: 1.4.0-beta.1
+ * Version: 1.4.0
  * Author: Sanctuary Hotels
  * Author URI: https://example.com
  * License: GPL v2 or later
@@ -18,8 +18,8 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('SHB_VERSION', '1.4.0-beta.1');
-define('SHB_DB_VERSION', '1.4.0-beta.1');
+define('SHB_VERSION', '1.4.0');
+define('SHB_DB_VERSION', '1.4.0');
 define('SHB_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SHB_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('SHB_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -334,6 +334,11 @@ class Sanctuary_Hotel_Booking
                 update_post_meta($post_id, '_shb_max_guests', $room_data['max_guests']);
                 update_post_meta($post_id, '_shb_amenities', $room_data['amenities']);
                 update_post_meta($post_id, '_shb_is_active', '1');
+
+                // Keep the taxonomy term in sync for scoped pricing.
+                if (class_exists('SHB_Room')) {
+                    SHB_Room::sync_room_type_term($post_id);
+                }
             }
         }
     }
@@ -451,10 +456,18 @@ class Sanctuary_Hotel_Booking
         );
 
         // Localize script
+        $public_currency_symbols = array();
+        if (class_exists('SHB_Location')) {
+            foreach (SHB_Location::get_locations() as $shb_location) {
+                $public_currency_symbols[$shb_location['id']] = $shb_location['currency_symbol'];
+            }
+        }
+
         wp_localize_script('shb-public-js', 'shb_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('shb_nonce'),
             'currency_symbol' => get_option('shb_currency_symbol', '$'),
+            'location_currency_symbols' => (object) $public_currency_symbols,
             'check_in_time' => get_option('shb_check_in_time', '14:00'),
             'check_out_time' => get_option('shb_check_out_time', '11:00'),
             'booking_url' => self::get_booking_url(),

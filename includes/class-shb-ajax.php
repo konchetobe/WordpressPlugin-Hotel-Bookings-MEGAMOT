@@ -276,12 +276,20 @@ class SHB_Ajax
     {
         check_ajax_referer('shb_admin_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can('manage_options') && !current_user_can('shb_manage_bookings')) {
             wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
         }
 
         $booking_id = intval($_POST['booking_id']);
         $status = sanitize_text_field($_POST['status']);
+
+        // Location managers may only change bookings in their assigned locations.
+        if (!current_user_can('manage_options')) {
+            $booking = SHB_Booking::get_booking($booking_id);
+            if (!$booking || !SHB_Location::user_can_manage($booking['location_id'])) {
+                wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
+            }
+        }
 
         $result = SHB_Booking::update_status($booking_id, $status);
 
@@ -299,12 +307,16 @@ class SHB_Ajax
     {
         check_ajax_referer('shb_admin_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can('manage_options') && !current_user_can('shb_manage_bookings') && !current_user_can('shb_manage_rooms')) {
             wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
         }
 
-        $rooms = SHB_Room::get_rooms();
-        $bookings = SHB_Booking::get_bookings();
+        $is_admin = current_user_can('manage_options');
+        $room_args = $is_admin ? array() : array('all' => 1, 'location_ids' => wp_list_pluck(SHB_Location::get_locations_for_user(), 'id'));
+        $booking_args = $is_admin ? array() : array('location_ids' => wp_list_pluck(SHB_Location::get_locations_for_user(), 'id'));
+
+        $rooms = SHB_Room::get_rooms($room_args);
+        $bookings = SHB_Booking::get_bookings($booking_args);
 
         $total_revenue = 0;
         $pending_count = 0;
@@ -393,12 +405,22 @@ class SHB_Ajax
     {
         check_ajax_referer('shb_admin_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can('manage_options') && !current_user_can('shb_manage_rooms')) {
             wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
         }
 
+        $room_id = intval($_POST['room_id']);
+
+        // Location managers may only block rooms in their assigned locations.
+        if (!current_user_can('manage_options')) {
+            $room = SHB_Room::get_room($room_id);
+            if (!$room || !SHB_Location::user_can_manage($room['location_id'])) {
+                wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
+            }
+        }
+
         $data = array(
-            'room_id' => intval($_POST['room_id']),
+            'room_id' => $room_id,
             'start_date' => sanitize_text_field($_POST['start_date']),
             'end_date' => sanitize_text_field($_POST['end_date']),
             'reason' => sanitize_text_field($_POST['reason'] ?? 'maintenance'),
@@ -420,11 +442,21 @@ class SHB_Ajax
     {
         check_ajax_referer('shb_admin_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can('manage_options') && !current_user_can('shb_manage_rooms')) {
             wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
         }
 
         $block_id = intval($_POST['block_id']);
+
+        // Location managers may only delete blocks on rooms in their locations.
+        if (!current_user_can('manage_options')) {
+            $block = SHB_Availability::get_availability_block($block_id);
+            $room = $block ? SHB_Room::get_room($block['room_id']) : null;
+            if (!$room || !SHB_Location::user_can_manage($room['location_id'])) {
+                wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
+            }
+        }
+
         SHB_Availability::delete_availability_block($block_id);
 
         wp_send_json_success(array('message' => __('Block removed', 'sanctuary-hotel-booking')));
@@ -437,11 +469,20 @@ class SHB_Ajax
     {
         check_ajax_referer('shb_admin_nonce', 'nonce');
 
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can('manage_options') && !current_user_can('shb_manage_bookings')) {
             wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
         }
 
         $booking_id = intval($_POST['booking_id']);
+
+        // Location managers may only email bookings in their assigned locations.
+        if (!current_user_can('manage_options')) {
+            $booking = SHB_Booking::get_booking($booking_id);
+            if (!$booking || !SHB_Location::user_can_manage($booking['location_id'])) {
+                wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
+            }
+        }
+
         $result = SHB_Booking::send_booking_details_email($booking_id);
 
         if (is_wp_error($result)) {

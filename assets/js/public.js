@@ -138,9 +138,18 @@
         });
     }
 
+    // Resolve the currency symbol for a room (location currency when known).
+    function roomCurrencySymbol(room) {
+        if (room && room.location_id && shb_ajax.location_currency_symbols) {
+            var symbol = shb_ajax.location_currency_symbols[room.location_id];
+            if (symbol) return escapeHtml(symbol);
+        }
+        return escapeHtml(shb_ajax.currency_symbol);
+    }
+
     // Render a single room card
     function renderRoomCard(room, checkIn, checkOut) {
-        var currency = escapeHtml(shb_ajax.currency_symbol);
+        var currency = roomCurrencySymbol(room);
         var price = room.calculated_price ? room.calculated_price.total : room.base_price;
         var priceLabel = room.calculated_price ? '/total' : '/night';
         var bedLabel = room.bed_type ? escapeHtml(room.bed_type.charAt(0).toUpperCase() + room.bed_type.slice(1)) : '';
@@ -232,7 +241,13 @@
             success: function (response) {
                 if (response.success) {
                     var d = response.data;
+                    // Prefer the room's location currency for the summary.
                     var currency = shb_ajax.currency_symbol;
+                    var wrapperRoomId = $form.closest('.shb-booking-form-wrap').data('room-id');
+                    if (wrapperRoomId && shb_ajax.location_currency_symbols) {
+                        var symbol = shb_ajax.location_currency_symbols[wrapperRoomId];
+                        if (symbol) currency = symbol;
+                    }
                     $('#nights-count').text(d.nights);
                     $('#subtotal-price').text(currency + parseFloat(d.subtotal).toFixed(2));
                     $('#total-price').text(currency + parseFloat(d.total).toFixed(2));
