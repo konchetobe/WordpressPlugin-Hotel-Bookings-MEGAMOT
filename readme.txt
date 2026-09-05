@@ -4,7 +4,7 @@ Tags: hotel booking, reservation, accommodation, booking system, hotel managemen
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,9 @@ Yes, go to Hotel Booking > Availability to create date blocks for any room.
 6. Settings page
 
 == Changelog ==
+
+= 1.4.1 =
+* **Fix** — resolved a fatal error on the **Hotel Booking → Locations** admin page. The Locations controller class was never loaded, so opening the page crashed with "There has been a critical error on this website." The missing include is now loaded.
 
 = 1.4.0 =
 * Stable release of the multi-location booking system.
