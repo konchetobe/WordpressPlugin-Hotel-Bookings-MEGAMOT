@@ -76,6 +76,7 @@ class Sanctuary_Hotel_Booking
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-settings.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-bookings.php';
+            require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-locations.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-pricing.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-migration.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-reports.php';
