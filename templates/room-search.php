@@ -47,6 +47,9 @@
         // Room type filter chips. On a location page the search is scoped to a
         // single property and $location_id is preset; the chips always render.
         $room_types = !empty($all_room_types) ? $all_room_types : SHB_Room_Type::get_room_types();
+        $bed_filter = isset($_GET['bed_type']) ? sanitize_title($_GET['bed_type']) : '';
+        $amenity_filter = isset($_GET['amenity']) ? array_map('sanitize_text_field', (array) $_GET['amenity']) : array();
+        $view_filter = isset($_GET['view']) ? array_map('sanitize_text_field', (array) $_GET['view']) : array();
         ?>
         <?php if (!empty($room_types)): ?>
             <div class="shb-search-filters" id="shb-search-filters">
@@ -64,6 +67,45 @@
             </div>
             <input type="hidden" id="shb-room-type" name="room_type"
                    value="<?php echo esc_attr($room_type_filter); ?>">
+        <?php endif; ?>
+
+        <?php if (!empty($filter_options['bed_types'])): ?>
+            <div class="shb-filter-group" data-group="bed" data-single="1">
+                <span class="shb-filter-label"><?php _e('Bed type:', 'sanctuary-hotel-booking'); ?></span>
+                <?php foreach ($filter_options['bed_types'] as $bed): ?>
+                    <button type="button" class="shb-filter-chip<?php echo $bed_filter === $bed['value'] ? ' active' : ''; ?>"
+                            data-value="<?php echo esc_attr($bed['value']); ?>">
+                        <?php echo esc_html($bed['label']); ?><span class="shb-filter-count"><?php echo esc_html($bed['count']); ?></span>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+            <input type="hidden" id="shb-bed-type" name="bed_type" data-input-for="bed" value="<?php echo esc_attr($bed_filter); ?>">
+        <?php endif; ?>
+
+        <?php if (!empty($filter_options['views'])): ?>
+            <div class="shb-filter-group" data-group="views">
+                <span class="shb-filter-label"><?php _e('Views & outdoor:', 'sanctuary-hotel-booking'); ?></span>
+                <?php foreach ($filter_options['views'] as $view): ?>
+                    <button type="button" class="shb-filter-chip<?php echo in_array($view['value'], $view_filter, true) ? ' active' : ''; ?>"
+                            data-value="<?php echo esc_attr($view['value']); ?>">
+                        <?php echo esc_html($view['value']); ?><span class="shb-filter-count"><?php echo esc_html($view['count']); ?></span>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+            <input type="hidden" id="shb-views" name="views" data-input-for="views" value="<?php echo esc_attr(implode(',', $view_filter)); ?>">
+        <?php endif; ?>
+
+        <?php if (!empty($filter_options['amenities'])): ?>
+            <div class="shb-filter-group" data-group="amenities">
+                <span class="shb-filter-label"><?php _e('Amenities:', 'sanctuary-hotel-booking'); ?></span>
+                <?php foreach ($filter_options['amenities'] as $amenity): ?>
+                    <button type="button" class="shb-filter-chip<?php echo in_array($amenity['value'], $amenity_filter, true) ? ' active' : ''; ?>"
+                            data-value="<?php echo esc_attr($amenity['value']); ?>">
+                        <?php echo esc_html($amenity['value']); ?><span class="shb-filter-count"><?php echo esc_html($amenity['count']); ?></span>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+            <input type="hidden" id="shb-amenities" name="amenities" data-input-for="amenities" value="<?php echo esc_attr(implode(',', $amenity_filter)); ?>">
         <?php endif; ?>
     </form>
     

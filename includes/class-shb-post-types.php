@@ -33,7 +33,7 @@ class SHB_Post_Types {
             'public' => true,
             'publicly_queryable' => true,
             'show_ui' => true,
-            'show_in_menu' => 'sanctuary-hotel-booking', // Show under Hotel Booking menu
+            'show_in_menu' => false, // Added via the plugin Rooms screen so we control the UI.
             'query_var' => true,
             'rewrite' => array('slug' => 'rooms', 'with_front' => false),
             'capability_type' => 'post',

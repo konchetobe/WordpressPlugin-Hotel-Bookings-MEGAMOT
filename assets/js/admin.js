@@ -467,4 +467,109 @@
         }
     });
 
+    // Room Setup screen: tab switching + WP media uploader for images/gallery
+    function initRoomSetup() {
+        // Tab switching
+        $('.shb-meta-tab').on('click', function() {
+            var tab = $(this).data('tab');
+            $('.shb-meta-tab').removeClass('active');
+            $(this).addClass('active');
+            $('.shb-meta-panel').removeClass('active');
+            $('.shb-meta-panel[data-panel="' + tab + '"]').addClass('active');
+        });
+
+        // Render preview thumbnails from attachment objects.
+        function renderPreviews($preview, attachments) {
+            var html = '';
+            attachments.forEach(function(att) {
+                var a = att.attributes || {};
+                var url = a.sizes && a.sizes.thumbnail ? a.sizes.thumbnail.url : a.url;
+                html += '<img src="' + url + '" alt="">';
+            });
+            $preview.html(html);
+        }
+
+        // Fetch attachments by ID list and render them into a preview container.
+        function fetchAndRender($preview, ids, done) {
+            var loaded = [];
+            var remaining = ids.length;
+            if (!remaining) { $preview.empty(); if (done) done(); return; }
+            ids.forEach(function(id) {
+                var att = wp.media.attachment(id);
+                att.fetch().done(function() {
+                    loaded.push(att);
+                    remaining--;
+                    if (remaining <= 0) {
+                        renderPreviews($preview, loaded);
+                        if (done) done();
+                    }
+                });
+            });
+        }
+
+        // Collect currently previewed attachment IDs for a multi-select field.
+        function currentGalleryIds() {
+            var raw = $('#shb_gallery_ids').val();
+            if (!raw) return [];
+            return raw.split(',').filter(function(v) { return v !== ''; });
+        }
+
+        // Media uploader (featured image = single, gallery = multiple)
+        $(document).on('click', '.shb-media-upload', function(e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var targetId = $btn.data('target');
+            var previewId = $btn.data('preview');
+            var multiple = $btn.data('multiple') == 1;
+
+            var frame = wp.media({
+                title: multiple ? (shb_admin.media_gallery_title || 'Select Gallery Images') : (shb_admin.media_image_title || 'Select Image'),
+                button: { text: shb_admin.media_button || 'Select' },
+                multiple: multiple
+            });
+
+            frame.on('select', function() {
+                var selection = frame.state().get('selection');
+                var attachments = [];
+                selection.each(function(att) { attachments.push(att); });
+
+                var $preview = $('#' + previewId);
+
+                if (multiple) {
+                    // Merge with existing selections, de-duplicate.
+                    var merged = currentGalleryIds();
+                    attachments.forEach(function(att) {
+                        var id = String(att.id);
+                        if (merged.indexOf(id) === -1) merged.push(id);
+                    });
+                    $('#shb_gallery_ids').val(merged.join(','));
+                    fetchAndRender($preview, merged);
+                } else {
+                    $('#' + targetId).val(attachments.length ? attachments[0].id : '');
+                    renderPreviews($preview, attachments);
+                }
+            });
+
+            frame.open();
+        });
+
+        // Remove image/gallery
+        $(document).on('click', '.shb-media-remove', function(e) {
+            e.preventDefault();
+            var targetId = $(this).data('target');
+            var previewId = $(this).data('preview');
+            if (targetId === 'shb_gallery_ids') {
+                $('#shb_gallery_ids').val('');
+            } else {
+                $('#' + targetId).val('');
+            }
+            $('#' + previewId).empty();
+        });
+    }
+
+    // Initialize the Room Setup screen (media uploader + tabs) on document ready
+    $(document).ready(function() {
+        initRoomSetup();
+    });
+
 })(jQuery);

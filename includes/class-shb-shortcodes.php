@@ -18,8 +18,32 @@ class SHB_Shortcodes
         add_shortcode('shb_booking_confirmation', array(__CLASS__, 'booking_confirmation'));
         add_shortcode('shb_my_bookings', array(__CLASS__, 'my_bookings'));
 
-        // Public property pages for locations.
+        // Public property pages for locations + rich single-room pages.
         add_filter('the_content', array(__CLASS__, 'location_page_content'));
+        add_filter('the_content', array(__CLASS__, 'room_page_content'));
+    }
+
+    /**
+     * Render a rich property page on single shb_room posts (replaces the raw
+     * post content with the structured room layout + booking form).
+     */
+    public static function room_page_content($content)
+    {
+        if (!is_singular('shb_room') || !in_the_loop() || !is_main_query()) {
+            return $content;
+        }
+
+        $room = SHB_Room::get_room(get_the_ID());
+        if (!$room) {
+            return $content;
+        }
+
+        $gallery_ids = (array) get_post_meta($room['id'], '_shb_gallery', true);
+        $currency = !empty($room['location']['currency_symbol']) ? $room['location']['currency_symbol'] : get_option('shb_currency_symbol', '$');
+
+        ob_start();
+        include SHB_PLUGIN_DIR . 'templates/room-page.php';
+        return ob_get_clean();
     }
 
     /**
@@ -79,6 +103,7 @@ class SHB_Shortcodes
         $location_id = $location['id'];
         $room_type_filter = isset($_GET['type']) ? sanitize_title($_GET['type']) : '';
         $all_room_types = SHB_Room_Type::get_room_types();
+        $filter_options = SHB_Room::get_search_filter_options($location_id);
 
         ob_start();
         $locations = array($location);
@@ -113,10 +138,11 @@ class SHB_Shortcodes
         }
 
         // Template variables used by room-search.php: a scoped location ID,
-        // the requested room type (query arg or preset), and the chip list.
+        // the requested room type (query arg or preset), and the chip lists.
         $location_id = $location;
         $room_type_filter = isset($_GET['type']) ? sanitize_title($_GET['type']) : '';
         $all_room_types = SHB_Room_Type::get_room_types();
+        $filter_options = SHB_Room::get_search_filter_options($location_id);
 
         ob_start();
         include SHB_PLUGIN_DIR . 'templates/room-search.php';

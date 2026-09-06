@@ -47,7 +47,7 @@
                             $room_total = SHB_Location::get_room_count($location['id']);
                             ?>
                             <?php if ($room_total > 0): ?>
-                                <a href="<?php echo esc_url(admin_url('edit.php?post_type=shb_room&shb_location_id=' . $location['id'])); ?>">
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=shb-rooms&shb_location_id=' . $location['id'])); ?>">
                                     <?php echo esc_html($room_total); ?>
                                 </a>
                                 <?php if (!empty($room_types)): ?>
@@ -73,7 +73,7 @@
                             <a href="<?php echo esc_url(admin_url('admin.php?page=shb-locations&action=edit&location_id=' . $location['id'])); ?>" class="button button-small">
                                 <?php _e('Manage', 'sanctuary-hotel-booking'); ?>
                             </a>
-                            <a href="<?php echo esc_url(admin_url('edit.php?post_type=shb_room&shb_location_id=' . $location['id'])); ?>" class="button button-small">
+                            <a href="<?php echo esc_url(admin_url('admin.php?page=shb-rooms&shb_location_id=' . $location['id'])); ?>" class="button button-small">
                                 <?php _e('Rooms', 'sanctuary-hotel-booking'); ?>
                             </a>
                             <?php if ($location['is_active'] && !empty($location['permalink'])): ?>

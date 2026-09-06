@@ -278,13 +278,95 @@ class SHB_Room
     }
 
     /**
-     * Search available rooms
+     * Distinct bed types + amenities across active rooms (optionally scoped to
+     * one location). Used to build the search filter chips.
+     *
+     * Returns:
+     *   'bed_types' => [['value'=>, 'label'=>, 'count'=>], ...] sorted by label
+     *   'views'     => [['value'=>, 'count'=>], ...] amenities in the view group
+     *   'amenities' => [['value'=>, 'count'=>], ...] every other amenity
      */
-    public static function search_available_rooms($check_in, $check_out, $guests = 1, $location_id = 0, $room_type = '')
+    public static function get_search_filter_options($location_id = 0)
     {
         $args = array();
         if ($location_id) {
             $args['location_id'] = absint($location_id);
+        }
+        $rooms = self::get_rooms($args); // Active rooms only.
+
+        $bed_counts = array();
+        $amenity_counts = array();
+        foreach ($rooms as $room) {
+            $bed = !empty($room['bed_type']) ? $room['bed_type'] : '';
+            if ($bed) {
+                $bed_counts[$bed] = isset($bed_counts[$bed]) ? $bed_counts[$bed] + 1 : 1;
+            }
+            $amenities = is_array($room['amenities']) ? $room['amenities'] : array();
+            foreach ($amenities as $amenity) {
+                $amenity_counts[$amenity] = isset($amenity_counts[$amenity]) ? $amenity_counts[$amenity] + 1 : 1;
+            }
+        }
+
+        // "Views & Outdoor" amenities shown as their own filter group.
+        $view_values = array('Balcony', 'Terrace', 'Ocean View', 'Mountain View', 'Garden View', 'City View');
+
+        $bed_types = array();
+        foreach ($bed_counts as $value => $count) {
+            $bed_types[] = array(
+                'value' => $value,
+                'label' => ucfirst(str_replace('_', ' ', $value)),
+                'count' => $count,
+            );
+        }
+        usort($bed_types, function ($a, $b) {
+            return strcmp($a['label'], $b['label']);
+        });
+
+        $views = array();
+        $amenities = array();
+        foreach ($amenity_counts as $value => $count) {
+            $entry = array('value' => $value, 'count' => $count);
+            if (in_array($value, $view_values, true)) {
+                $views[] = $entry;
+            } else {
+                $amenities[] = $entry;
+            }
+        }
+        usort($views, function ($a, $b) {
+            return $b['count'] - $a['count'];
+        });
+        usort($amenities, function ($a, $b) {
+            return $b['count'] - $a['count'];
+        });
+
+        // Cap the general amenity chips at the most popular 12.
+        $amenities = array_slice($amenities, 0, 12);
+
+        return array(
+            'bed_types' => $bed_types,
+            'views' => $views,
+            'amenities' => $amenities,
+        );
+    }
+
+    /**
+     * Search available rooms.
+     *
+     * $filters supports:
+     *   'bed_type'  (string)  exact _shb_bed_type match
+     *   'amenities' (array)   rooms must include ALL given amenity strings
+     */
+    public static function search_available_rooms($check_in, $check_out, $guests = 1, $location_id = 0, $room_type = '', $filters = array())
+    {
+        $args = array();
+        if ($location_id) {
+            $args['location_id'] = absint($location_id);
+        }
+
+        $bed_type = isset($filters['bed_type']) ? sanitize_title($filters['bed_type']) : '';
+        $amenities = array();
+        if (!empty($filters['amenities']) && is_array($filters['amenities'])) {
+            $amenities = array_values(array_unique(array_map('sanitize_text_field', $filters['amenities'])));
         }
 
         $all_rooms = self::get_rooms($args);
@@ -302,6 +384,20 @@ class SHB_Room
                     $room_type_slug = get_post_meta($room['id'], '_shb_room_type', true) ?: '';
                 }
                 if ($room_type_slug !== $room_type) {
+                    continue;
+                }
+            }
+
+            // Filter by bed type.
+            if ($bed_type !== '' && $room['bed_type'] !== $bed_type) {
+                continue;
+            }
+
+            // Filter by amenities (ALL chosen must be present).
+            if (!empty($amenities)) {
+                $room_amenities = is_array($room['amenities']) ? $room['amenities'] : array();
+                $missing = array_diff($amenities, $room_amenities);
+                if (!empty($missing)) {
                     continue;
                 }
             }

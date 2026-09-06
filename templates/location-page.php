@@ -96,9 +96,9 @@ $currency_symbol = !empty($location['currency_symbol']) ? $location['currency_sy
         <div class="shb-location-search">
             <h2><?php _e('Check Availability', 'sanctuary-hotel-booking'); ?></h2>
             <?php
-            // Room search scoped to this property; room type chips stay on.
-            // $locations / $location_id / $room_type_filter / $all_room_types
-            // are provided by SHB_Shortcodes::location_page_content().
+            // Room search scoped to this property; filter chips stay on.
+            // $locations / $location_id / $room_type_filter / $all_room_types /
+            // $filter_options are provided by SHB_Shortcodes::location_page_content().
             include SHB_PLUGIN_DIR . 'templates/room-search.php';
             ?>
         </div>

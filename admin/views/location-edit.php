@@ -116,7 +116,7 @@
                 <?php _e('This property has', 'sanctuary-hotel-booking'); ?>
                 <strong><?php echo esc_html(count($location_rooms)); ?></strong>
                 <?php _e('room(s) in total.', 'sanctuary-hotel-booking'); ?>
-                <a href="<?php echo esc_url(admin_url('post-new.php?post_type=shb_room&location_id=' . $location['id'])); ?>" class="button button-small">
+                <a href="<?php echo esc_url(admin_url('admin.php?page=shb-rooms&action=new&location_id=' . $location['id'])); ?>" class="button button-small">
                     <?php _e('Add Room here', 'sanctuary-hotel-booking'); ?>
                 </a>
             </p>
@@ -149,7 +149,7 @@
                         <?php foreach ($location_rooms as $room): ?>
                             <tr>
                                 <td>
-                                    <a href="<?php echo esc_url(admin_url('post.php?post=' . $room['id'] . '&action=edit')); ?>">
+                                    <a href="<?php echo esc_url(admin_url('admin.php?page=shb-rooms&action=edit&room_id=' . $room['id'])); ?>">
                                         <?php echo esc_html($room['name']); ?>
                                     </a>
                                 </td>
@@ -169,7 +169,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <a href="<?php echo esc_url(admin_url('post.php?post=' . $room['id'] . '&action=edit')); ?>" class="button button-small">
+                                    <a href="<?php echo esc_url(admin_url('admin.php?page=shb-rooms&action=edit&room_id=' . $room['id'])); ?>" class="button button-small">
                                         <?php _e('Edit Room', 'sanctuary-hotel-booking'); ?>
                                     </a>
                                 </td>

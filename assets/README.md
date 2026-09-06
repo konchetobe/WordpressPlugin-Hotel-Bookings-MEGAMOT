@@ -57,15 +57,22 @@ $(document).ready(function() {
 Search results are now **server-rendered**: `shb_search_rooms` returns card HTML
 built from `templates/room-card.php` (plus the structured `rooms` array), and
 `public.js` injects it. The legacy JS card builder remains only as a fallback.
-Room type chips toggle a hidden `room_type` input sent with each search.
+Room type chips toggle a hidden `room_type` input; bed type/views/amenities
+chips toggle comma-separated hidden inputs sent with each search.
 
 ### Admin (admin.js)
 - Pricing rules modal includes a scope selector (Global / Location / Room Type
   at Location / Room) with dependent dropdowns populated server-side.
-- Room type defaults prefill: on the room editor, changing the type dropdown
-  fetches `shb_admin_get_room_type_defaults` and fills empty fields (all fields
-  for a brand-new room). Checkbox "Apply room type defaults to empty fields
-  when the type changes" controls the behavior on type change.
+- Room type defaults prefill: on the Room Setup screen, changing the type
+  dropdown fetches `shb_admin_get_room_type_defaults` and fills empty fields
+  (all fields for a brand-new room). Checkbox "Apply room type defaults to
+  empty fields when the type changes" controls the behavior on type change.
+- Room Setup media pickers: `wp.media` frame for the featured image (single)
+  and gallery (multiple, comma-joined into `#shb_gallery_ids`); previews
+  render thumbnails.
+
+### Room page (public.js)
+- Gallery thumbnails swap the main image (`initRoomGallery`).
 
 ### AJAX Pattern
 ```javascript

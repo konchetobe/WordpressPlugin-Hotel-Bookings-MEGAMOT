@@ -48,7 +48,7 @@
     <div class="shb-quick-actions">
         <h2><?php _e('Quick Actions', 'sanctuary-hotel-booking'); ?></h2>
         <div class="shb-action-buttons">
-            <a href="<?php echo admin_url('post-new.php?post_type=shb_room'); ?>" class="button button-primary">
+            <a href="<?php echo admin_url('admin.php?page=shb-rooms&action=new'); ?>" class="button button-primary">
                 <span class="dashicons dashicons-plus-alt"></span>
                 <?php _e('Add New Room', 'sanctuary-hotel-booking'); ?>
             </a>

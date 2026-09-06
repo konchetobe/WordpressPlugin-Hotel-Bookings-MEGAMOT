@@ -81,10 +81,15 @@ shb_location (CPT)
   creates/matches the term from the meta (used by save, sample data, search,
   and the migration).
 - Room types carry an optional **defaults template** in term meta
-  (`_shb_type_*` keys, see `SHB_Room_Type`). The room meta box prefills a new
-  room from the chosen type's defaults (AJAX
+  (`_shb_type_*` keys, see `SHB_Room_Type`). The Room Setup screen prefills a
+  new room from the chosen type's defaults (AJAX
   `shb_admin_get_room_type_defaults`); existing rooms are never overwritten
   (only empty fields get filled on type change).
+- Rooms are managed through `SHB_Admin_Rooms` (Room Setup screen) which writes
+  the same meta keys plus `_shb_gallery` + featured image. Search supports
+  extra attribute filters via `SHB_Room::search_available_rooms(..., $filters)`
+  (`bed_type`, `amenities[]` ALL-match); `SHB_Room::get_search_filter_options()`
+  builds the frontend chip lists.
 
 ## Migrations
 

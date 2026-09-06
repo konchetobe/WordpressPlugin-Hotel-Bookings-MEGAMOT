@@ -9,8 +9,9 @@ This directory contains PHP template files for frontend display.
 | `booking-form.php` | `[shb_booking_form]` | `$room`, `$user`, `$dates`, `$room_id`, `$check_in`, `$check_out`, `$guests`, `$prefill`, `$blocked_dates` |
 | `booking-confirmation.php` | `[shb_booking_confirmation]` | `$booking`, `$location`, `$check_in_time`, `$check_out_time`, `$currency_symbol` |
 | `room-card.php` | (shared partial) | `$room`, `$price`, `$currency_symbol`, `$dates`, `$atts` |
-| `room-search.php` | `[shb_room_search]` | `$locations`, `$location`, `$location_id`, `$room_type_filter`, `$all_room_types` |
+| `room-search.php` | `[shb_room_search]` | `$locations`, `$location_id`, `$room_type_filter`, `$all_room_types`, `$filter_options` |
 | `room-list.php` | `[shb_room_list]` | `$rooms`, `$atts` |
+| `room-page.php` | single `shb_room` posts | `$room`, `$gallery_ids`, `$currency` |
 | `my-bookings.php` | `[shb_my_bookings]` | `$bookings` |
 | `location-page.php` | single `shb_location` posts | `$location`, `$rooms`, `$room_types`, `$locations`, `$location_id`, `$room_type_filter`, `$all_room_types` |
 
@@ -18,7 +19,9 @@ This directory contains PHP template files for frontend display.
 `room-list.php` and server-rendered by `SHB_Ajax::search_rooms()` for search
 results. `room-search.php` renders a location selector when more than one
 active location exists (a hidden field when scoped to one), plus room type
-filter chips bound to the `room_type` search parameter.
+chips and bed type/view/amenity chips (from `$filter_options`) bound to the
+`room_type`/`bed_type`/`amenities`/`views` search parameters. `room-page.php`
+is rendered by `SHB_Shortcodes::room_page_content()` on single room posts.
 
 `$booking` and each item in `$bookings` include `calendar_token`. Confirmation
 pages require it as `booking_token`; calendar download links must send it as

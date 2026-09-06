@@ -78,6 +78,7 @@ class Sanctuary_Hotel_Booking
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-room-types.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-settings.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-bookings.php';
+            require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-rooms.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-locations.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-pricing.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-migration.php';
@@ -537,11 +538,19 @@ class Sanctuary_Hotel_Booking
             true
         );
 
+        // WP media library for the Room Setup image/gallery pickers.
+        $needs_media = $screen && isset($screen->id) && strpos($screen->id, 'shb-rooms') !== false;
+        $script_deps = array('jquery', 'chartjs');
+        if ($needs_media) {
+            wp_enqueue_media();
+            $script_deps[] = 'wp-media';
+        }
+
         // JS
         wp_enqueue_script(
             'shb-admin-js',
             SHB_PLUGIN_URL . 'assets/js/admin.js',
-            array('jquery', 'chartjs'),
+            $script_deps,
             SHB_VERSION,
             true
         );
@@ -550,6 +559,9 @@ class Sanctuary_Hotel_Booking
         wp_localize_script('shb-admin-js', 'shb_admin', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('shb_admin_nonce'),
+            'media_image_title' => __('Select Featured Image', 'sanctuary-hotel-booking'),
+            'media_gallery_title' => __('Select Gallery Images', 'sanctuary-hotel-booking'),
+            'media_button' => __('Use Image', 'sanctuary-hotel-booking'),
         ));
     }
 }

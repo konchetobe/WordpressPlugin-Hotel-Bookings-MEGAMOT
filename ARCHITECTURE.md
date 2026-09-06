@@ -82,9 +82,10 @@ sanctuary-hotel-booking/
 | Class | File | Purpose |
 |-------|------|---------|
 | `SHB_Ajax` | `includes/class-shb-ajax.php` | All AJAX endpoint handlers |
-| `SHB_Admin` | `admin/class-shb-admin.php` | Admin menus, dashboard |
+| `SHB_Admin` | `admin/class-shb-admin.php` | Admin menus, dashboard, Gutenberg-off redirects for rooms |
+| `SHB_Admin_Rooms` | `admin/class-shb-admin-rooms.php` | Rooms list + Room Setup screen (replaces Gutenberg room editor) |
 | `SHB_Admin_Locations` | `admin/class-shb-admin-locations.php` | Location list/add/edit pages, per-location room hub, delete guard |
-| `SHB_Admin_Room_Types` | `admin/class-shb-admin-room-types.php` | Room Type defaults editor screen |
+| `SHB_Admin_Room_Types` | `admin/class-shb-admin-room-types.php` | Room Types manager (create/rename/delete + defaults) |
 | `SHB_Admin_Migration` | `admin/class-shb-admin-migration.php` | Migration report page |
 | `SHB_Admin_Reports` | `admin/class-shb-admin-reports.php` | Occupancy/revenue reports |
 | `SHB_Admin_Settings` | `admin/class-shb-admin-settings.php` | Plugin settings |
@@ -119,6 +120,11 @@ lazily created by `SHB_Location::get_default_location_id()`.
 
 ### `shb_room` (Rooms)
 Stores hotel room information. Each room is one physical bookable unit.
+Rooms are created/edited on the plugin-owned **Hotel Booking → Rooms** screen
+(`SHB_Admin_Rooms`, "Room Setup") — the Gutenberg editor is disabled for this
+post type (direct `post.php`/`post-new.php` URLs redirect to the plugin
+screen). The public single-room URL (`/rooms/<slug>/`) renders a rich page
+via `SHB_Shortcodes::room_page_content()`.
 
 **Meta Fields:**
 | Meta Key | Type | Description |
@@ -128,8 +134,9 @@ Stores hotel room information. Each room is one physical bookable unit.
 | `_shb_max_guests` | int | Maximum occupancy |
 | `_shb_base_price` | float | Base price per night |
 | `_shb_amenities` | array | List of amenities |
-| `_shb_gallery` | array | Gallery image IDs |
+| `_shb_gallery` | array | Gallery attachment IDs (set via the Room Setup media picker) |
 | `_shb_size` | int | Room size in sqm |
+| featured image | int | `set_post_thumbnail()` via Room Setup |
 
 Room post meta is registered with `register_post_meta()` (REST-visible) in
 `SHB_Room_Type::register_meta()`.
@@ -137,9 +144,11 @@ Room post meta is registered with `register_post_meta()` (REST-visible) in
 ### Room Type Defaults (`shb_room_type` term meta)
 Room types are taxonomy terms that double as a **defaults template**: when an
 admin creates a room of a type, its stored defaults prefill the room fields.
-Rooms stay the bookable unit and may override every default. Defaults are
-edited on the **Hotel Booking → Room Types** screen (`SHB_Admin_Room_Types`)
-and applied in the room meta box (AJAX `shb_admin_get_room_type_defaults`).
+Rooms stay the bookable unit and may override every default. Room Types are
+fully managed (create/rename/delete + defaults) on the
+**Hotel Booking → Room Types** screen (`SHB_Admin_Room_Types`); deletion is
+refused while rooms use the type. Defaults are applied in the Room Setup form
+(AJAX `shb_admin_get_room_type_defaults`).
 
 | Term Meta Key | Defaults For |
 |---------------|--------------|
@@ -283,7 +292,15 @@ Single `shb_location` posts render a property page (via `the_content` in
 `SHB_Shortcodes::location_page_content()`): hero image + contact/address info,
 a per-room-type summary of the location's active rooms (count + from-price,
 linking to `?location=X&type=slug` on the same page), and an availability
-search scoped to that location with room type chips.
+search scoped to that location with room type + amenity chips.
+
+### Room Property Pages
+Single `shb_room` posts render a rich page (via `the_content` in
+`SHB_Shortcodes::room_page_content()`, replacing the raw post content):
+gallery hero (featured image + `_shb_gallery` thumbnails), description,
+specs grid (guests, bed, size, floor, from-price, cancellation policy),
+grouped amenity tags, a property/location card, and an embedded
+`[shb_booking_form]` with live pricing and blocked dates.
 
 ---
 
@@ -387,11 +404,12 @@ Settings are stored as WordPress options with `shb_` prefix.
 
 ### Room Search Flow
 ```
-User Input (dates, guests, location, optional room type chip)
+User Input (dates, guests, location, room type + bed type + view + amenity chips)
     ↓
-SHB_Ajax::search_rooms()
+SHB_Ajax::search_rooms()  (reads bed_type, amenities[], views[])
     ↓
-SHB_Room::search_available_rooms(check_in, check_out, guests, location_id, room_type)
+SHB_Room::search_available_rooms(check_in, check_out, guests, location_id, room_type, filters)
+    ├─ candidates filtered by location, type, bed type, and amenities (ALL match)
     ↓
 SHB_Availability::check_room_availability() for each room
     ├─ availability blocks table
@@ -403,6 +421,10 @@ Return room cards (server-rendered via templates/room-card.php) + location name
     ↓
 Frontend injects the HTML into the results grid
 ```
+
+Filter chips are built from `SHB_Room::get_search_filter_options($location_id)`
+(distinct bed types, "Views & Outdoor" amenities, and popular amenities among
+active rooms, optionally scoped to one location).
 
 ### Booking Creation Flow
 ```
@@ -472,8 +494,9 @@ Templates are loaded from `/templates/` directory. They receive data via PHP var
 | `booking-form.php` | `$room`, `$user`, `$dates` | `[shb_booking_form]` |
 | `booking-confirmation.php` | `$booking` | `[shb_booking_confirmation]` |
 | `room-card.php` | `$room`, `$price`, `$currency_symbol`, `$dates`, `$atts` | Room list + search results (shared partial) |
-| `room-search.php` | `$locations`, `$location`, `$location_id`, `$room_type_filter`, `$all_room_types` | `[shb_room_search]`, location pages |
+| `room-search.php` | `$locations`, `$location_id`, `$room_type_filter`, `$all_room_types`, `$filter_options` | `[shb_room_search]`, location pages |
 | `location-page.php` | `$location`, `$rooms`, `$room_types`, `$locations`, `$location_id`, `$room_type_filter`, `$all_room_types` | Single `shb_location` posts |
+| `room-page.php` | `$room`, `$gallery_ids`, `$currency` | Single `shb_room` posts |
 | `room-list.php` | `$rooms`, `$atts` | `[shb_room_list]` |
 | `my-bookings.php` | `$bookings` | `[shb_my_bookings]` |
 
@@ -486,7 +509,8 @@ Admin pages are registered in `SHB_Admin::add_admin_menu()`.
 | Menu Slug | Page | Description |
 |-----------|------|-------------|
 | `sanctuary-hotel-booking` | Dashboard | Overview, stats, recent bookings |
-| `shb-room-types` | Room Types | Room type defaults editor (terms managed via taxonomy screen) |
+| `shb-rooms` | Rooms | Plugin-owned Rooms list + Room Setup screen (replaces Gutenberg editor) |
+| `shb-room-types` | Room Types | Room Types manager: create/rename/delete types + defaults |
 | `shb-locations` | Locations | Location list/add/edit, per-location room hub, delete guard |
 | `shb-bookings` | Bookings | Booking list, calendar view, location filter |
 | `shb-pricing` | Pricing Rules | Scoped pricing rules |

@@ -84,11 +84,11 @@
         var $form = $('#shb-search-form');
         if (!$form.length) return;
 
-        // Room type filter chips toggle the hidden room_type input.
-        $(document).on('click', '.shb-filter-chip', function () {
+        // Room type chips toggle a hidden input (single-select group).
+        $(document).on('click', '[data-type]', function () {
             var $chip = $(this);
             var active = $chip.hasClass('active');
-            $('.shb-filter-chip').removeClass('active');
+            $('.shb-filter-chip[data-type]').removeClass('active');
             if (!active) {
                 $chip.addClass('active');
                 $('#shb-room-type').val($chip.data('type'));
@@ -96,6 +96,39 @@
                 $('#shb-room-type').val('');
             }
         });
+
+        // Multi-select chip groups (bed type is single-select; views and
+        // amenities are multi). Each group keeps a comma-hidden input.
+        function readGroupValues($group) {
+            var values = [];
+            $group.find('.shb-filter-chip.active').each(function () {
+                var v = $(this).data('value');
+                if (v) values.push(v);
+            });
+            return values;
+        }
+
+        function bindGroup($group) {
+            if (!$group.length) return;
+            var $input = $group.closest('form').find('[data-input-for="' + $group.data('group') + '"]');
+            if (!$input.length) return;
+
+            $group.on('click', '.shb-filter-chip', function () {
+                var $chip = $(this);
+                var single = $group.data('single') === 1;
+                if (single) {
+                    $group.find('.shb-filter-chip').removeClass('active');
+                    $chip.addClass('active');
+                } else {
+                    $chip.toggleClass('active');
+                }
+                $input.val(readGroupValues($group).join(','));
+            });
+        }
+
+        bindGroup($('.shb-filter-group[data-group="bed"]'));
+        bindGroup($('.shb-filter-group[data-group="views"]'));
+        bindGroup($('.shb-filter-group[data-group="amenities"]'));
 
         $form.on('submit', function (e) {
             e.preventDefault();
@@ -105,6 +138,15 @@
             var guests = $('#shb-guests').val();
             var locationId = $('#shb-location').length ? $('#shb-location').val() : 0;
             var roomType = $('#shb-room-type').length ? $('#shb-room-type').val() : '';
+
+            // Parse comma-separated hidden inputs into arrays.
+            function csv(id) {
+                var v = $(id).length ? $(id).val() : '';
+                return v ? v.split(',').filter(function (s) { return s !== ''; }) : [];
+            }
+            var amenities = csv('#shb-amenities');
+            var views = csv('#shb-views');
+            var bedType = $('#shb-bed-type').length ? $('#shb-bed-type').val() : '';
 
             if (!checkIn || !checkOut) {
                 alert('Please select check-in and check-out dates.');
@@ -129,7 +171,10 @@
                     check_out: checkOut,
                     guests: guests,
                     location_id: locationId,
-                    room_type: roomType
+                    room_type: roomType,
+                    bed_type: bedType,
+                    amenities: amenities,
+                    views: views
                 },
                 success: function (response) {
                     $('#shb-search-loading').hide();
@@ -342,11 +387,25 @@
         });
     }
 
+    // Room page gallery thumbnail switcher
+    function initRoomGallery() {
+        var $main = $('#shb-room-gallery-main-img');
+        if (!$main.length) return;
+
+        $(document).on('click', '.shb-gallery-thumb', function () {
+            var $thumb = $(this);
+            $('.shb-gallery-thumb').removeClass('active');
+            $thumb.addClass('active');
+            $main.attr('src', $thumb.data('src'));
+        });
+    }
+
     // Init everything
     $(document).ready(function () {
         initDatePickers();
         initRoomSearch();
         initBookingForm();
+        initRoomGallery();
     });
 
 })(jQuery);

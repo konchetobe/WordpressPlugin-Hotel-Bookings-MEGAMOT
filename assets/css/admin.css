@@ -783,4 +783,115 @@
 .shb-delete-link {
     color: #b32d2e !important;
     border-color: #b32d2e !important;
-}/* Sanctuary Hotel Booking - Admin Styles */
+}
+
+/* ===== Room Setup screen (meta-box styles moved from room-meta-box.php) ===== */
+.shb-room-meta-box .form-table th {
+    width: 200px;
+    padding: 15px 10px 15px 0;
+}
+.shb-room-meta-box .form-table td {
+    padding: 15px 10px;
+}
+.shb-meta-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 20px;
+}
+.shb-meta-tab {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.2s;
+}
+.shb-meta-tab:hover {
+    color: #1e293b;
+}
+.shb-meta-tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+.shb-meta-panel {
+    display: none;
+}
+.shb-meta-panel.active {
+    display: block;
+}
+.shb-amenity-group {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.shb-amenity-group:last-of-type {
+    border-bottom: none;
+}
+.shb-amenity-group-title {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+}
+.shb-amenity-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.shb-amenity-label {
+    font-weight: normal !important;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+.shb-amenity-label:hover {
+    color: #2563eb;
+}
+@media (max-width: 782px) {
+    .shb-amenity-checkboxes {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Room Setup media pickers */
+.shb-media-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+.shb-media-field {
+    min-width: 220px;
+}
+.shb-thumb-preview img,
+.shb-gallery-preview img {
+    max-width: 150px;
+    height: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin: 6px 6px 0 0;
+    vertical-align: top;
+}
+.shb-gallery-preview {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* Rooms list */
+.shb-room-actions .button {
+    margin: 0 2px 2px 0;
+}
+.shb-room-id code {
+    font-size: 11px;
+    background: #f1f5f9;
+    padding: 1px 6px;
+    border-radius: 3px;
+}

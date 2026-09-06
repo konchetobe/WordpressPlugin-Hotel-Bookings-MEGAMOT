@@ -58,11 +58,26 @@ class SHB_Ajax
         $location_id = absint($_POST['location_id'] ?? 0);
         $room_type = sanitize_title(wp_unslash($_POST['room_type'] ?? ''));
 
+        $filters = array();
+        if (!empty($_POST['bed_type'])) {
+            $filters['bed_type'] = sanitize_title(wp_unslash($_POST['bed_type']));
+        }
+        $amenities = array();
+        if (!empty($_POST['amenities']) && is_array($_POST['amenities'])) {
+            $amenities = array_map('sanitize_text_field', array_map('wp_unslash', $_POST['amenities']));
+        }
+        if (!empty($_POST['views']) && is_array($_POST['views'])) {
+            $amenities = array_merge($amenities, array_map('sanitize_text_field', array_map('wp_unslash', $_POST['views'])));
+        }
+        if (!empty($amenities)) {
+            $filters['amenities'] = array_values(array_unique($amenities));
+        }
+
         if (SHB_Booking::calculate_nights($check_in, $check_out) < 1) {
             wp_send_json_error(array('message' => __('Please select a valid check-in and check-out date', 'sanctuary-hotel-booking')));
         }
 
-        $rooms = SHB_Room::search_available_rooms($check_in, $check_out, $guests, $location_id, $room_type);
+        $rooms = SHB_Room::search_available_rooms($check_in, $check_out, $guests, $location_id, $room_type, $filters);
 
         // Render the canonical room-card partial server-side so the public JS
         // only injects trusted HTML (single source of truth for card markup).

@@ -131,3 +131,46 @@ criterion in `MULTI_LOCATION_PLAN.md`.
 2. Visit the site's search page with more than one active location.
    - [ ] The location selector and room type chips both filter results.
    - [ ] Cards render identically to `[shb_room_list]` (shared partial).
+
+## Room Setup screen (plugin-owned, replaces Gutenberg)
+
+1. Open **Hotel Booking → Rooms → Add New Room**.
+   - [ ] It loads the plugin screen (no Gutenberg editor); direct
+         `post-new.php?post_type=shb_room` redirects here.
+2. Fill name, description, featured image + gallery (media picker), assign a
+   location + room type; pick room type defaults prefill empty fields.
+   - [ ] Saving persists everything; the room appears in the Rooms list with
+         type/location/price columns.
+3. Edit an existing room from the list.
+   - [ ] All fields pre-fill (incl. gallery thumbnails); direct
+         `post.php?post=<room>&action=edit` redirects here.
+4. Try deleting a room that has a non-cancelled booking.
+   - [ ] Deletion is refused with a clear message.
+5. Delete a booking-free room.
+   - [ ] It is removed from the list.
+
+## Room Types manager
+
+1. Open **Hotel Booking → Room Types**.
+   - [ ] "Add New Type" creates a term shown in the list with a room count.
+2. Edit a type: rename it, change its slug/description and defaults.
+   - [ ] Rename reflects in the Rooms list/type dropdown.
+3. Delete a type that still has rooms.
+   - [ ] Deletion is refused.
+4. Delete an unused type.
+   - [ ] It disappears and its defaults meta is cleaned up.
+
+## Search attribute filters
+
+1. On the search page, tick a bed type, a view, and an amenity chip.
+   - [ ] Results only contain rooms matching bed type and ALL chosen
+         amenities/views.
+2. Combine with location + room type.
+   - [ ] Filters combine correctly.
+
+## Rich room pages
+
+1. Visit a room's public URL (`/rooms/<slug>/`).
+   - [ ] Gallery (featured + thumbs) swaps the main image on click.
+   - [ ] Description, specs, amenities, and property card render.
+   - [ ] Booking section shows the live price summary and books the room.

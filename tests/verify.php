@@ -216,5 +216,78 @@ if ($guard_location && !is_wp_error($guard_location)) {
     echo "SKIP  location delete guard (could not create test location)\n";
 }
 
+// 11. Room search filters (bed type + amenities ALL match) via SHB_Admin_Rooms save.
+$filter_room_id = SHB_Admin_Rooms::save_room(array(
+    'name' => 'Verify Filter Room',
+    'description' => 'Filter test room',
+    'shb_location_id' => SHB_Location::get_default_location_id(),
+    'shb_room_type' => 'standard',
+    'shb_base_price' => '90',
+    'shb_max_guests' => '2',
+    'shb_bed_type' => 'king',
+    'shb_room_size' => '20',
+    'shb_floor' => '1',
+    'shb_is_active' => '1',
+    'shb_amenities' => array('WiFi', 'Balcony'),
+    'shb_min_nights' => '1',
+    'shb_max_nights' => '30',
+    'shb_cancellation_policy' => 'flexible',
+));
+if (!is_wp_error($filter_room_id)) {
+    $check_in = gmdate('Y-m-d', strtotime('+60 days'));
+    $check_out = gmdate('Y-m-d', strtotime('+61 days'));
+
+    $bed_results = SHB_Room::search_available_rooms($check_in, $check_out, 1, 0, '', array('bed_type' => 'king'));
+    $found = 0;
+    foreach ($bed_results as $r) {
+        if ($r['id'] === $filter_room_id) {
+            $found++;
+        }
+    }
+    shb_verify('search filters by bed type', $found === 1, 'king room missing');
+
+    $amenity_results = SHB_Room::search_available_rooms($check_in, $check_out, 1, 0, '', array('amenities' => array('WiFi', 'Balcony')));
+    $found = 0;
+    foreach ($amenity_results as $r) {
+        if ($r['id'] === $filter_room_id) {
+            $found++;
+        }
+    }
+    shb_verify('search filters by amenities (ALL match)', $found === 1, 'WiFi+Balcony room missing');
+
+    $miss_results = SHB_Room::search_available_rooms($check_in, $check_out, 1, 0, '', array('amenities' => array('Jacuzzi')));
+    $found = 0;
+    foreach ($miss_results as $r) {
+        if ($r['id'] === $filter_room_id) {
+            $found++;
+        }
+    }
+    shb_verify('search excludes rooms missing amenities', $found === 0, 'room leaked without Jacuzzi');
+
+    // Room delete guard: refuse while an active booking exists.
+    $booking_result = SHB_Booking::create_booking(array(
+        'room_id' => $filter_room_id,
+        'check_in' => gmdate('Y-m-d', strtotime('+75 days')),
+        'check_out' => gmdate('Y-m-d', strtotime('+76 days')),
+        'guests' => 1,
+        'first_name' => 'Verify',
+        'last_name' => 'DeleteGuard',
+        'email' => 'verify-delete@example.test',
+        'phone' => '000',
+    ));
+    if (!is_wp_error($booking_result)) {
+        $del_result = SHB_Admin_Rooms::delete_room($filter_room_id);
+        shb_verify('room delete refused with active booking', is_wp_error($del_result) && $del_result->get_error_code() === 'has_bookings');
+        SHB_Booking::update_status($booking_result['booking_id'], 'cancelled');
+        $del_result = SHB_Admin_Rooms::delete_room($filter_room_id);
+        shb_verify('room deletable after booking cancelled', $del_result === true, is_wp_error($del_result) ? $del_result->get_error_message() : 'unexpected result');
+    } else {
+        echo "SKIP  room delete guard (could not create test booking)\n";
+        wp_delete_post($filter_room_id, true);
+    }
+} else {
+    echo "SKIP  room setup save + filters (" . $filter_room_id->get_error_message() . ")\n";
+}
+
 echo $failures === 0 ? "\nAll checks passed.\n" : "\n{$failures} check(s) failed.\n";
 exit($failures === 0 ? 0 : 1);

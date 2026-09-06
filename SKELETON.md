@@ -224,11 +224,18 @@ class SHB_Room {
     public static function get_room_type_counts_by_location(int $location_id): array
     // Returns: [['slug' => string, 'name' => string, 'count' => int], ...] sorted by count desc
     
-    // Search available rooms (supports location_id and room_type filters)
+    // Distinct searchable attributes across active rooms (optionally scoped)
+    public static function get_search_filter_options(int $location_id = 0): array
+    // Returns: ['bed_types' => [['value','label','count']],
+    //           'views'     => [['value','count']],
+    //           'amenities' => [['value','count']]]
+    
+    // Search available rooms (location_id, room_type, and attribute filters)
     public static function search_available_rooms(
         string $check_in, string $check_out, int $guests = 1,
-        int $location_id = 0, string $room_type = ''
+        int $location_id = 0, string $room_type = '', array $filters = []
     ): array
+    // $filters: ['bed_type' => string, 'amenities' => string[] (ALL match)]
     
     // Format room data from post
     public static function format_room(WP_Post|int $post): array
@@ -549,6 +556,10 @@ class SHB_Shortcodes {
     public static function location_page_content(string $content): string
     // Filter: the_content (only on singular shb_location in the main loop)
     
+    // Renders a rich single-room page (replaces content on singular shb_room)
+    public static function room_page_content(string $content): string
+    // Filter: the_content (only on singular shb_room in the main loop)
+    
     // Booking form (location attr; validates room belongs to it)
     public static function booking_form(array $atts): string
     // Shortcode: [shb_booking_form room_id="123" location="12"]
@@ -627,11 +638,53 @@ class SHB_Admin_Locations {
 
 ```php
 class SHB_Admin_Room_Types {
-    // Room Types defaults list + edit screen under Hotel Booking
+    // Room Types manager list + edit screen under Hotel Booking
     public static function render_page(): void
+
+    // Create a new type term; returns term ID or WP_Error
+    public static function create_type(array $data): int|WP_Error
+
+    // Update a type (name/slug/description) + defaults template
+    public static function save_type(int $type_id, array $data): int|WP_Error
+
+    // Delete a type (refused while rooms use it); defaults meta auto-cleaned
+    public static function delete_type(int $type_id): true|WP_Error
+
+    // Count rooms carrying the term
+    public static function count_rooms_by_type(int $term_id): int
 }
 ```
 
 Nonce actions: `shb_location_save` (field `shb_location_nonce`),
 `shb_location_delete` (field `shb_location_delete_nonce`),
-`shb_room_type_defaults_save` (field `shb_room_type_defaults_nonce`).
+`shb_room_type_manage` (field `shb_room_type_nonce`).
+
+---
+
+## SHB_Admin_Rooms (admin/class-shb-admin-rooms.php)
+
+```php
+class SHB_Admin_Rooms {
+    // Rooms list / Room Setup add/edit/delete pages (action query arg routing)
+    public static function render_page(): void
+
+    // Room Setup form page (add/edit); handles save POST + re-reads room
+    public static function render_edit_page(int $room_id = 0): void
+
+    // Insert or update a room from the Room Setup form; returns post ID or WP_Error
+    public static function save_room(array $data): int|WP_Error
+    // Saves: title, slug, description (post_content), location, room type
+    // (term + legacy meta), price, guests, bed, size, floor, amenities,
+    // status, night limits, cancellation policy, notes, featured image,
+    // _shb_gallery (comma-separated attachment IDs)
+
+    // Delete a room (refused while non-cancelled bookings reference it)
+    public static function delete_room(int $room_id): true|WP_Error
+
+    // Confirm screen shown before deletion
+    public static function render_delete_confirm(int $room_id): void
+}
+```
+
+Nonce actions: `shb_room_setup_save` (field `shb_room_setup_nonce`),
+`shb_room_delete` (field `shb_room_delete_nonce`).

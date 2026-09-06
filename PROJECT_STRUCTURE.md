@@ -36,13 +36,14 @@ sanctuary-hotel-booking/
 │
 ├── admin/                        # Admin-only code
 │   ├── README.md                 # Module documentation
-│   ├── class-shb-admin.php       # Admin menus/pages
+│   ├── class-shb-admin.php       # Admin menus/pages, Gutenberg-off redirects
 │   ├── class-shb-admin-bookings.php # Bookings page
 │   ├── class-shb-admin-locations.php # Locations CRUD + hub + delete guard
 │   ├── class-shb-admin-migration.php # Migration report
 │   ├── class-shb-admin-pricing.php   # Pricing rules page
 │   ├── class-shb-admin-reports.php   # Occupancy/revenue reports
-│   ├── class-shb-admin-room-types.php # Room Types defaults editor
+│   ├── class-shb-admin-rooms.php     # Rooms list + Room Setup screen
+│   ├── class-shb-admin-room-types.php # Room Types manager (create/rename/delete + defaults)
 │   ├── class-shb-admin-settings.php # Settings management
 │   └── views/                    # Admin HTML templates
 │       ├── availability.php
@@ -53,7 +54,8 @@ sanctuary-hotel-booking/
 │       ├── migration.php
 │       ├── pricing.php
 │       ├── reports.php
-│       ├── room-meta-box.php
+│       ├── room-edit.php         # Room Setup form (plugin-owned, media uploader)
+│       ├── rooms.php             # Rooms list
 │       ├── room-types.php
 │       └── settings.php
 │
@@ -64,7 +66,8 @@ sanctuary-hotel-booking/
 │   ├── location-page.php         # Public location property page content
 │   ├── room-card.php             # Canonical room card partial (shared)
 │   ├── room-list.php             # Room list (location-aware)
-│   ├── room-search.php           # Search form (location + room type chips)
+│   ├── room-page.php             # Rich public single-room page
+│   ├── room-search.php           # Search form (location, room type, bed, amenities)
 │   └── my-bookings.php           # Customer bookings lookup
 │
 ├── assets/                       # Static assets
@@ -94,7 +97,7 @@ sanctuary-hotel-booking/
 |------------|------------|
 | Add AJAX endpoint | `includes/class-shb-ajax.php` |
 | Modify booking logic | `includes/class-shb-booking.php` |
-| Change room fields | `includes/class-shb-room.php` |
+| Change room fields | `includes/class-shb-room.php`, `admin/class-shb-admin-rooms.php` (Room Setup) |
 | Manage room type defaults | `includes/class-shb-room-type.php`, `admin/class-shb-admin-room-types.php` |
 | Update payment flow | `includes/class-shb-payments.php` |
 | Manage locations | `includes/class-shb-location.php`, `admin/class-shb-admin-locations.php` |
