@@ -12,6 +12,21 @@ if (!defined('ABSPATH') && !defined('WP_CLI')) {
     exit;
 }
 
+// Admin-only classes are not autoloaded outside is_admin() (WP-CLI eval runs
+// in a front-end context), so load the ones the checks below use directly.
+if (defined('WP_CLI') && WP_CLI) {
+    $shb_plugin_dir = dirname(__DIR__);
+    $shb_admin_files = array(
+        'SHB_Admin_Locations' => 'admin/class-shb-admin-locations.php',
+        'SHB_Admin_Rooms'     => 'admin/class-shb-admin-rooms.php',
+    );
+    foreach ($shb_admin_files as $shb_class => $shb_file) {
+        if (!class_exists($shb_class, false)) {
+            require_once $shb_plugin_dir . '/' . $shb_file;
+        }
+    }
+}
+
 $failures = 0;
 
 function shb_verify($label, $ok, $detail = '') {
@@ -87,7 +102,15 @@ foreach ($bookings as $booking_id) {
 shb_verify('bookings have location snapshots', $snapshots_missing === 0, "{$snapshots_missing} missing");
 
 // 7. Booking creation writes nights.
-$test_room = get_posts(array('post_type' => 'shb_room', 'posts_per_page' => 1, 'fields' => 'ids'));
+// Pick an ACTIVE room (the first raw shb_room post may be an inactive leftover
+// from earlier verify runs).
+$test_room = get_posts(array(
+    'post_type' => 'shb_room',
+    'posts_per_page' => 1,
+    'fields' => 'ids',
+    'meta_key' => '_shb_is_active',
+    'meta_value' => '1',
+));
 if (!empty($test_room)) {
     $room = SHB_Room::get_room($test_room[0]);
     $check_in = gmdate('Y-m-d', strtotime('+30 days'));
@@ -125,7 +148,16 @@ if (!empty($test_room)) {
 }
 
 // 8. Roles registered.
-shb_verify('administrator has shb caps', user_can(wp_get_current_user(), 'shb_manage_bookings'));
+// WP-CLI runs as no user, so check an actual administrator account instead of
+// the (anonymous) current user.
+$shb_admin_check_user = get_current_user_id();
+if (!$shb_admin_check_user) {
+    $shb_admins = get_users(array('role' => 'administrator', 'number' => 1));
+    if (!empty($shb_admins)) {
+        $shb_admin_check_user = $shb_admins[0]->ID;
+    }
+}
+shb_verify('administrator has shb caps', $shb_admin_check_user && user_can($shb_admin_check_user, 'shb_manage_bookings'));
 shb_verify('location manager role exists', !is_null(get_role('shb_location_manager')));
 
 // 9. Room type defaults round-trip (create/read/delete on a throwaway term).

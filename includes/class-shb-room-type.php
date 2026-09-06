@@ -70,26 +70,44 @@ class SHB_Room_Type {
         );
 
         foreach ($room_keys as $key => $type) {
+            $args = array(
+                'show_in_rest' => true,
+                'single'       => true,
+                'type'         => $type,
+            );
+            if ('array' === $type) {
+                $args['show_in_rest'] = array(
+                    'schema' => array(
+                        'type'  => 'array',
+                        'items' => array('type' => 'string'),
+                    ),
+                );
+            }
             register_post_meta(
                 'shb_room',
                 $key,
-                array(
-                    'show_in_rest' => true,
-                    'single'       => true,
-                    'type'         => $type,
-                )
+                $args
             );
         }
 
         foreach (self::get_meta_keys() as $key) {
+            $term_meta_args = array(
+                'show_in_rest' => true,
+                'single'       => true,
+                'type'         => '_shb_type_amenities' === $key ? 'array' : 'string',
+            );
+            if ('_shb_type_amenities' === $key) {
+                $term_meta_args['show_in_rest'] = array(
+                    'schema' => array(
+                        'type'  => 'array',
+                        'items' => array('type' => 'string'),
+                    ),
+                );
+            }
             register_term_meta(
                 'shb_room_type',
                 $key,
-                array(
-                    'show_in_rest' => true,
-                    'single'       => true,
-                    'type'         => 'string',
-                )
+                $term_meta_args
             );
         }
     }
