@@ -17,6 +17,75 @@ class SHB_Shortcodes
         add_shortcode('shb_room_search', array(__CLASS__, 'room_search'));
         add_shortcode('shb_booking_confirmation', array(__CLASS__, 'booking_confirmation'));
         add_shortcode('shb_my_bookings', array(__CLASS__, 'my_bookings'));
+
+        // Public property pages for locations.
+        add_filter('the_content', array(__CLASS__, 'location_page_content'));
+    }
+
+    /**
+     * Render a location property page on single shb_location posts.
+     */
+    public static function location_page_content($content)
+    {
+        if (!is_singular('shb_location') || !in_the_loop() || !is_main_query()) {
+            return $content;
+        }
+
+        $location = SHB_Location::get_location(get_the_ID());
+        if (!$location) {
+            return $content;
+        }
+
+        $rooms = SHB_Room::get_rooms(array('location_id' => $location['id']));
+
+        // Per-room-type summary of active rooms at this location.
+        $type_map = array();
+        foreach (SHB_Room_Type::get_room_types() as $type) {
+            $type_map[$type['slug']] = $type;
+        }
+
+        $room_types = array();
+        foreach ($rooms as $room) {
+            if (!$room['is_active']) {
+                continue;
+            }
+            $slug = $room['room_type'];
+            if (!isset($room_types[$slug])) {
+                $type_data = isset($type_map[$slug]) ? $type_map[$slug] : array('name' => ucfirst($slug), 'description' => '');
+                $room_types[$slug] = array(
+                    'slug' => $slug,
+                    'name' => $type_data['name'],
+                    'description' => isset($type_data['description']) ? $type_data['description'] : '',
+                    'count' => 0,
+                    'min_price' => PHP_FLOAT_MAX,
+                    'image' => '',
+                );
+            }
+            $room_types[$slug]['count']++;
+            $room_types[$slug]['min_price'] = min($room_types[$slug]['min_price'], $room['base_price']);
+            if (empty($room_types[$slug]['image']) && !empty($room['image'])) {
+                $room_types[$slug]['image'] = $room['image'];
+            }
+        }
+
+        foreach ($room_types as $slug => $type) {
+            if ($type['min_price'] === PHP_FLOAT_MAX) {
+                $room_types[$slug]['min_price'] = 0;
+            }
+        }
+        $room_types = array_values($room_types);
+
+        // Search scoped to this location, honoring a ?type= deep link.
+        $location_id = $location['id'];
+        $room_type_filter = isset($_GET['type']) ? sanitize_title($_GET['type']) : '';
+        $all_room_types = SHB_Room_Type::get_room_types();
+
+        ob_start();
+        $locations = array($location);
+        include SHB_PLUGIN_DIR . 'templates/location-page.php';
+        $property_content = ob_get_clean();
+
+        return $content . $property_content;
     }
 
     /**
@@ -42,6 +111,12 @@ class SHB_Shortcodes
                 $location = $default_id;
             }
         }
+
+        // Template variables used by room-search.php: a scoped location ID,
+        // the requested room type (query arg or preset), and the chip list.
+        $location_id = $location;
+        $room_type_filter = isset($_GET['type']) ? sanitize_title($_GET['type']) : '';
+        $all_room_types = SHB_Room_Type::get_room_types();
 
         ob_start();
         include SHB_PLUGIN_DIR . 'templates/room-search.php';

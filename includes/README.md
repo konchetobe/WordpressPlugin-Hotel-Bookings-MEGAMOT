@@ -19,6 +19,7 @@ This directory contains the core PHP classes that power the plugin.
 | `class-shb-roles.php` | `SHB_Roles` | Location manager role + caps |
 | `class-shb-room.php` | `SHB_Room` | Room CRUD (location-aware) |
 | `class-shb-room-nights.php` | `SHB_Room_Nights` | Per-night allocation table |
+| `class-shb-room-type.php` | `SHB_Room_Type` | Room type defaults template (term meta) + meta registration |
 | `class-shb-shortcodes.php` | `SHB_Shortcodes` | Shortcode handlers (location-aware) |
 | `class-shb-update-checker.php` | `SHB_Update_Checker` | GitHub Release update integration |
 
@@ -79,6 +80,11 @@ shb_location (CPT)
   kept in sync as the compatibility fallback. `SHB_Room::sync_room_type_term()`
   creates/matches the term from the meta (used by save, sample data, search,
   and the migration).
+- Room types carry an optional **defaults template** in term meta
+  (`_shb_type_*` keys, see `SHB_Room_Type`). The room meta box prefills a new
+  room from the chosen type's defaults (AJAX
+  `shb_admin_get_room_type_defaults`); existing rooms are never overwritten
+  (only empty fields get filled on type change).
 
 ## Migrations
 

@@ -37,12 +37,27 @@
                 </th>
                 <td>
                     <select name="shb_room_type" id="shb_room_type" class="regular-text">
-                        <option value="standard" <?php selected($room_type, 'standard'); ?>><?php _e('Standard', 'sanctuary-hotel-booking'); ?></option>
-                        <option value="deluxe" <?php selected($room_type, 'deluxe'); ?>><?php _e('Deluxe', 'sanctuary-hotel-booking'); ?></option>
-                        <option value="suite" <?php selected($room_type, 'suite'); ?>><?php _e('Suite', 'sanctuary-hotel-booking'); ?></option>
-                        <option value="family" <?php selected($room_type, 'family'); ?>><?php _e('Family', 'sanctuary-hotel-booking'); ?></option>
-                        <option value="penthouse" <?php selected($room_type, 'penthouse'); ?>><?php _e('Penthouse', 'sanctuary-hotel-booking'); ?></option>
+                        <?php
+                        $type_slugs = wp_list_pluck($room_types, 'slug');
+                        $has_current = in_array($room_type, $type_slugs, true);
+                        ?>
+                        <?php if (!$has_current): ?>
+                            <option value="<?php echo esc_attr($room_type); ?>" selected>
+                                <?php echo esc_html(ucfirst($room_type)); ?> (<?php _e('legacy', 'sanctuary-hotel-booking'); ?>)
+                            </option>
+                        <?php endif; ?>
+                        <?php foreach ($room_types as $type): ?>
+                            <option value="<?php echo esc_attr($type['slug']); ?>" <?php selected($room_type, $type['slug']); ?>>
+                                <?php echo esc_html($type['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
+                    <p class="description" style="margin-top:6px;">
+                        <label>
+                            <input type="checkbox" id="shb_apply_type_defaults" checked>
+                            <?php _e('Apply room type defaults to empty fields when the type changes', 'sanctuary-hotel-booking'); ?>
+                        </label>
+                    </p>
                 </td>
             </tr>
             <tr>

@@ -308,12 +308,129 @@
         });
     }
 
+    // Room type defaults prefill in the room meta box
+    function initRoomTypeDefaultsPrefill() {
+        var $typeSelect = $('#shb_room_type');
+        if (!$typeSelect.length) return;
+
+        // A brand-new room has no positive post ID yet.
+        function isNewRoom() {
+            var id = parseInt($('#post_ID').val(), 10);
+            return !(id > 0);
+        }
+
+        // Fill a text/number/select field only when it is empty, unless we are
+        // prefilling a brand-new room (no post ID yet) — then use the defaults
+        // as initial values.
+        function applyDefault($field, value) {
+            var newRoom = isNewRoom();
+            if (value === '' || value === null || value === undefined) return;
+            if (newRoom) {
+                if ($field.is(':checkbox')) {
+                    $field.prop('checked', value === 1 || value === '1' || value === true);
+                } else if ($field.is(':radio')) {
+                    $field.filter('[value="' + $('<span>').text(value).html() + '"]').prop('checked', true);
+                } else if ($field.is('select')) {
+                    $field.val(String(value));
+                } else {
+                    $field.val(value);
+                }
+                return;
+            }
+            // Existing room: never clobber manually-entered values.
+            if ($field.is(':checkbox')) {
+                if (!$field.prop('checked') && (value === 1 || value === '1' || value === true)) {
+                    $field.prop('checked', true);
+                }
+            } else if ($field.is('select')) {
+                if (!$field.val()) {
+                    $field.val(String(value));
+                }
+            } else if (!$field.val()) {
+                $field.val(value);
+            }
+        }
+
+        function applyDefaultsToFields(defaults) {
+            if (!defaults) return;
+            var map = {
+                'type_base_price': { selector: '#shb_base_price', key: '_shb_type_base_price' },
+                'type_max_guests': { selector: '#shb_max_guests', key: '_shb_type_max_guests' },
+                'type_bed_type': { selector: '#shb_bed_type', key: '_shb_type_bed_type' },
+                'type_room_size': { selector: '#shb_room_size', key: '_shb_type_room_size' },
+                'type_floor': { selector: '#shb_floor', key: '_shb_type_floor' },
+                'type_min_nights': { selector: '#shb_min_nights', key: '_shb_type_min_nights' },
+                'type_max_nights': { selector: '#shb_max_nights', key: '_shb_type_max_nights' },
+                'type_cancellation_policy': { selector: '#shb_cancellation_policy', key: '_shb_type_cancellation_policy' }
+            };
+            $.each(map, function (name, cfg) {
+                var value = defaults[cfg.key];
+                if (value === undefined || value === null) return;
+                var $field = $(cfg.selector);
+                if ($field.length) applyDefault($field, value);
+            });
+
+            // Amenities are checkboxes; check those included in the defaults.
+            if (defaults._shb_type_amenities && defaults._shb_type_amenities.length) {
+                $('input[name="shb_amenities[]"]').each(function () {
+                    var $cb = $(this);
+                    var inDefaults = defaults._shb_type_amenities.indexOf($cb.val()) !== -1;
+                    if (inDefaults) {
+                        $cb.prop('checked', true);
+                    } else if (isNewRoom()) {
+                        $cb.prop('checked', false);
+                    }
+                });
+            }
+        }
+
+        // Apply the current type's defaults on load for a new room so the form
+        // opens pre-filled; existing rooms are left untouched.
+        if (isNewRoom() && $typeSelect.val()) {
+            $.ajax({
+                url: shb_admin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'shb_admin_get_room_type_defaults',
+                    nonce: shb_admin.nonce,
+                    room_type: $typeSelect.val()
+                },
+                success: function (response) {
+                    if (response.success && response.data && response.data.defaults) {
+                        applyDefaultsToFields(response.data.defaults);
+                    }
+                }
+            });
+        }
+
+        $typeSelect.on('change', function () {
+            if (!$('#shb_apply_type_defaults').is(':checked')) return;
+            var roomType = $(this).val();
+            if (!roomType) return;
+            $.ajax({
+                url: shb_admin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'shb_admin_get_room_type_defaults',
+                    nonce: shb_admin.nonce,
+                    room_type: roomType
+                },
+                success: function (response) {
+                    if (response.success && response.data && response.data.defaults) {
+                        applyDefaultsToFields(response.data.defaults);
+                    }
+                }
+            });
+        });
+    }
+
     // Initialize on document ready
     $(document).ready(function() {
         initBookingStatusUpdate();
         initSendEmailButton();
         initPricingRulesModal();
         initAvailabilityModal();
+        initRoomTypeDefaultsPrefill();
         
         // Accordion toggle for shortcode reference
         $(document).on('click', '.shb-accordion-toggle', function() {

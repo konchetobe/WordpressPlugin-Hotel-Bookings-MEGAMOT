@@ -27,6 +27,7 @@ sanctuary-hotel-booking/
 │   ├── class-shb-roles.php       # Location manager role + caps
 │   ├── class-shb-room.php        # Room CRUD (location-aware)
 │   ├── class-shb-room-nights.php # Per-night allocation table service
+│   ├── class-shb-room-type.php   # Room type defaults template (term meta)
 │   ├── class-shb-shortcodes.php  # Shortcode handlers (location-aware)
 │   └── class-shb-update-checker.php # GitHub Release update integration
 │
@@ -37,10 +38,11 @@ sanctuary-hotel-booking/
 │   ├── README.md                 # Module documentation
 │   ├── class-shb-admin.php       # Admin menus/pages
 │   ├── class-shb-admin-bookings.php # Bookings page
-│   ├── class-shb-admin-locations.php # Locations CRUD
+│   ├── class-shb-admin-locations.php # Locations CRUD + hub + delete guard
 │   ├── class-shb-admin-migration.php # Migration report
 │   ├── class-shb-admin-pricing.php   # Pricing rules page
 │   ├── class-shb-admin-reports.php   # Occupancy/revenue reports
+│   ├── class-shb-admin-room-types.php # Room Types defaults editor
 │   ├── class-shb-admin-settings.php # Settings management
 │   └── views/                    # Admin HTML templates
 │       ├── availability.php
@@ -52,15 +54,17 @@ sanctuary-hotel-booking/
 │       ├── pricing.php
 │       ├── reports.php
 │       ├── room-meta-box.php
+│       ├── room-types.php
 │       └── settings.php
 │
 ├── templates/                    # Frontend templates
 │   ├── README.md                 # Module documentation
 │   ├── booking-form.php          # Booking form (location-aware)
 │   ├── booking-confirmation.php  # Confirmation page (location-aware)
-│   ├── room-card.php             # Room display card
+│   ├── location-page.php         # Public location property page content
+│   ├── room-card.php             # Canonical room card partial (shared)
 │   ├── room-list.php             # Room list (location-aware)
-│   ├── room-search.php           # Search form (location selector)
+│   ├── room-search.php           # Search form (location + room type chips)
 │   └── my-bookings.php           # Customer bookings lookup
 │
 ├── assets/                       # Static assets
@@ -91,6 +95,7 @@ sanctuary-hotel-booking/
 | Add AJAX endpoint | `includes/class-shb-ajax.php` |
 | Modify booking logic | `includes/class-shb-booking.php` |
 | Change room fields | `includes/class-shb-room.php` |
+| Manage room type defaults | `includes/class-shb-room-type.php`, `admin/class-shb-admin-room-types.php` |
 | Update payment flow | `includes/class-shb-payments.php` |
 | Manage locations | `includes/class-shb-location.php`, `admin/class-shb-admin-locations.php` |
 | Allocation / double-booking safety | `includes/class-shb-room-nights.php` |

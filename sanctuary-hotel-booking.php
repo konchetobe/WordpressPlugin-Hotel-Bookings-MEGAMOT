@@ -56,6 +56,7 @@ class Sanctuary_Hotel_Booking
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-migration.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-roles.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-room.php';
+        require_once SHB_PLUGIN_DIR . 'includes/class-shb-room-type.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-booking.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-pricing.php';
         require_once SHB_PLUGIN_DIR . 'includes/class-shb-availability.php';
@@ -74,6 +75,7 @@ class Sanctuary_Hotel_Booking
         // Admin includes
         if (is_admin()) {
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin.php';
+            require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-room-types.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-settings.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-bookings.php';
             require_once SHB_PLUGIN_DIR . 'admin/class-shb-admin-locations.php';
@@ -125,6 +127,10 @@ class Sanctuary_Hotel_Booking
         // Register post types EARLY - priority 0
         add_action('init', array('SHB_Post_Types', 'register_post_types'), 0);
         add_action('init', array('SHB_Post_Types', 'register_taxonomies'), 0);
+
+        // Register REST-visible room/term meta early, then room type hooks.
+        add_action('init', array('SHB_Room_Type', 'register_meta'), 0);
+        add_action('init', array('SHB_Room_Type', 'init'));
 
         // Stripe webhook endpoint
         add_action('rest_api_init', array('SHB_Payments', 'register_rest_routes'));
@@ -385,7 +391,7 @@ class Sanctuary_Hotel_Booking
             }
         }
 
-        if (!is_singular('shb_room') && !$has_shortcode && !$has_block) {
+        if (!is_singular('shb_room') && !is_singular('shb_location') && !$has_shortcode && !$has_block) {
             return;
         }
 

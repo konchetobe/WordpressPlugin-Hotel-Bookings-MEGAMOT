@@ -93,3 +93,41 @@ criterion in `MULTI_LOCATION_PLAN.md`.
 2. Open **Hotel Booking → Reports**, filter by date range and location.
    - [ ] Occupancy nights and rates are per room/location.
    - [ ] Revenue is per location and timezone-correct.
+
+## Room types as defaults (Phase A)
+
+1. Open **Hotel Booking → Room Types** → **Edit Defaults** on a type; save
+   price/guests/bed/amenities/etc.
+2. Add a new room (`post-new.php?post_type=shb_room`), pick that room type.
+   - [ ] Empty fields prefill with the defaults.
+3. Change an existing room's type.
+   - [ ] Only empty fields are filled; manually set values are untouched.
+4. Search on the frontend and toggle the room type chips.
+   - [ ] Results only include rooms of the selected type.
+5. Create two rooms of the same type at two locations.
+   - [ ] They remain independent bookable units.
+
+## Locations hub & delete guard (Phase B)
+
+1. Open **Hotel Booking → Locations**.
+   - [ ] Rooms column shows the count and a per-type breakdown; clicking it
+         opens the rooms list filtered to that location.
+2. Open **Manage** on a location.
+   - [ ] "Rooms at this location" lists its units with an "Add Room here"
+         button that preselects the location.
+3. With rooms assigned: the Delete action is hidden/disabled.
+4. After deleting all rooms (with no bookings referencing it), delete the
+   location from the confirm screen.
+   - [ ] It is removed and `shb_default_location_id` is cleared if it pointed
+         there.
+
+## Location property pages (Phase C)
+
+1. Visit a location's public URL (`/locations/<slug>/`).
+   - [ ] Hero + contact details render.
+   - [ ] Room-type summary cards show count + from-price; the link keeps
+         `?location=<id>&type=<slug>` on the page.
+   - [ ] The availability search is scoped to that property.
+2. Visit the site's search page with more than one active location.
+   - [ ] The location selector and room type chips both filter results.
+   - [ ] Cards render identically to `[shb_room_list]` (shared partial).

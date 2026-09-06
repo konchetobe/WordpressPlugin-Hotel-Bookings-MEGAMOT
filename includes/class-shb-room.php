@@ -226,9 +226,61 @@ class SHB_Room
     }
 
     /**
+     * Count active rooms per room type at a location.
+     * Returns array of ['slug', 'name', 'count'] sorted by count (desc).
+     */
+    public static function get_room_type_counts_by_location($location_id)
+    {
+        $location_id = absint($location_id);
+        if (!$location_id) {
+            return array();
+        }
+
+        $rooms = get_posts(array(
+            'post_type' => 'shb_room',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+            'meta_query' => array(
+                array(
+                    'key' => '_shb_location_id',
+                    'value' => $location_id,
+                ),
+                array(
+                    'key' => '_shb_is_active',
+                    'value' => '1',
+                ),
+            ),
+        ));
+
+        $counts = array();
+        foreach ($rooms as $room_id) {
+            // Canonical type is the term; fall back to legacy meta.
+            $terms = get_the_terms($room_id, 'shb_room_type');
+            if (!empty($terms) && !is_wp_error($terms)) {
+                $slug = $terms[0]->slug;
+                $name = $terms[0]->name;
+            } else {
+                $slug = get_post_meta($room_id, '_shb_room_type', true) ?: 'standard';
+                $name = ucfirst($slug);
+            }
+            if (!isset($counts[$slug])) {
+                $counts[$slug] = array('slug' => $slug, 'name' => $name, 'count' => 0);
+            }
+            $counts[$slug]['count']++;
+        }
+
+        usort($counts, function ($a, $b) {
+            return $b['count'] - $a['count'];
+        });
+
+        return array_values($counts);
+    }
+
+    /**
      * Search available rooms
      */
-    public static function search_available_rooms($check_in, $check_out, $guests = 1, $location_id = 0)
+    public static function search_available_rooms($check_in, $check_out, $guests = 1, $location_id = 0, $room_type = '')
     {
         $args = array();
         if ($location_id) {
@@ -241,6 +293,18 @@ class SHB_Room
         foreach ($all_rooms as $room) {
             // Make sure the room has a term so scoped pricing can match it.
             self::sync_room_type_term($room['id']);
+
+            // Filter by room type when requested (canonical term slug).
+            if ($room_type !== '') {
+                $terms = get_the_terms($room['id'], 'shb_room_type');
+                $room_type_slug = !empty($terms) && !is_wp_error($terms) ? $terms[0]->slug : '';
+                if (!$room_type_slug) {
+                    $room_type_slug = get_post_meta($room['id'], '_shb_room_type', true) ?: '';
+                }
+                if ($room_type_slug !== $room_type) {
+                    continue;
+                }
+            }
 
             if ($room['max_guests'] >= $guests) {
                 $is_available = SHB_Availability::check_room_availability(

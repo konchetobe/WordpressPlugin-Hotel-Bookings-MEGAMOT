@@ -84,6 +84,19 @@
         var $form = $('#shb-search-form');
         if (!$form.length) return;
 
+        // Room type filter chips toggle the hidden room_type input.
+        $(document).on('click', '.shb-filter-chip', function () {
+            var $chip = $(this);
+            var active = $chip.hasClass('active');
+            $('.shb-filter-chip').removeClass('active');
+            if (!active) {
+                $chip.addClass('active');
+                $('#shb-room-type').val($chip.data('type'));
+            } else {
+                $('#shb-room-type').val('');
+            }
+        });
+
         $form.on('submit', function (e) {
             e.preventDefault();
 
@@ -91,6 +104,7 @@
             var checkOut = $('#shb-check-out').val();
             var guests = $('#shb-guests').val();
             var locationId = $('#shb-location').length ? $('#shb-location').val() : 0;
+            var roomType = $('#shb-room-type').length ? $('#shb-room-type').val() : '';
 
             if (!checkIn || !checkOut) {
                 alert('Please select check-in and check-out dates.');
@@ -114,15 +128,21 @@
                     check_in: checkIn,
                     check_out: checkOut,
                     guests: guests,
-                    location_id: locationId
+                    location_id: locationId,
+                    room_type: roomType
                 },
                 success: function (response) {
                     $('#shb-search-loading').hide();
                     if (response.success && response.data.rooms.length > 0) {
                         var rooms = response.data.rooms;
                         var $grid = $('#shb-rooms-grid').empty();
-                        for (var i = 0; i < rooms.length; i++) {
-                            $grid.append(renderRoomCard(rooms[i], checkIn, checkOut));
+                        // Prefer server-rendered card HTML (canonical markup).
+                        if (response.data.html) {
+                            $grid.html(response.data.html);
+                        } else {
+                            for (var i = 0; i < rooms.length; i++) {
+                                $grid.append(renderRoomCard(rooms[i], checkIn, checkOut));
+                            }
                         }
                         $('#shb-results-count').text(rooms.length + ' room' + (rooms.length > 1 ? 's' : '') + ' found');
                         $('#shb-search-results').fadeIn(300);

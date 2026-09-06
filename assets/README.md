@@ -39,6 +39,8 @@ assets/
 | `.shb-button` | Button base class |
 | `.shb-status-*` | Status badges |
 | `.shb-room-location` | Location name on cards |
+| `.shb-filter-chip` | Room type filter chip in search |
+| `.shb-location-page` | Public location property page wrapper |
 
 ## JavaScript Architecture
 
@@ -47,18 +49,23 @@ assets/
 // Main entry point
 $(document).ready(function() {
     initDatePickers();      // Initialize date pickers
-    initRoomSearch();       // Room search (sends location_id, renders location name)
+    initRoomSearch();       // Room search (location + room type chips; injects server-rendered card HTML)
     initBookingForm();      // Booking form handling
 });
 ```
 
-`public.js` escapes room fields and limits dynamically generated image/link
-URLs to HTTP(S) before adding AJAX search results to the page. Search results
-include a location line and the book URL carries `location`.
+Search results are now **server-rendered**: `shb_search_rooms` returns card HTML
+built from `templates/room-card.php` (plus the structured `rooms` array), and
+`public.js` injects it. The legacy JS card builder remains only as a fallback.
+Room type chips toggle a hidden `room_type` input sent with each search.
 
 ### Admin (admin.js)
 - Pricing rules modal includes a scope selector (Global / Location / Room Type
   at Location / Room) with dependent dropdowns populated server-side.
+- Room type defaults prefill: on the room editor, changing the type dropdown
+  fetches `shb_admin_get_room_type_defaults` and fills empty fields (all fields
+  for a brand-new room). Checkbox "Apply room type defaults to empty fields
+  when the type changes" controls the behavior on type change.
 
 ### AJAX Pattern
 ```javascript

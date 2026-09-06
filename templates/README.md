@@ -8,10 +8,17 @@ This directory contains PHP template files for frontend display.
 |------|-----------|---------------------|
 | `booking-form.php` | `[shb_booking_form]` | `$room`, `$user`, `$dates`, `$room_id`, `$check_in`, `$check_out`, `$guests`, `$prefill`, `$blocked_dates` |
 | `booking-confirmation.php` | `[shb_booking_confirmation]` | `$booking`, `$location`, `$check_in_time`, `$check_out_time`, `$currency_symbol` |
-| `room-card.php` | (partial) | `$room`, `$dates`, `$price` |
-| `room-search.php` | `[shb_room_search]` | `$locations`, `$location` |
+| `room-card.php` | (shared partial) | `$room`, `$price`, `$currency_symbol`, `$dates`, `$atts` |
+| `room-search.php` | `[shb_room_search]` | `$locations`, `$location`, `$location_id`, `$room_type_filter`, `$all_room_types` |
 | `room-list.php` | `[shb_room_list]` | `$rooms`, `$atts` |
 | `my-bookings.php` | `[shb_my_bookings]` | `$bookings` |
+| `location-page.php` | single `shb_location` posts | `$location`, `$rooms`, `$room_types`, `$locations`, `$location_id`, `$room_type_filter`, `$all_room_types` |
+
+`room-card.php` is the single source of truth for room card markup: used by
+`room-list.php` and server-rendered by `SHB_Ajax::search_rooms()` for search
+results. `room-search.php` renders a location selector when more than one
+active location exists (a hidden field when scoped to one), plus room type
+filter chips bound to the `room_type` search parameter.
 
 `$booking` and each item in `$bookings` include `calendar_token`. Confirmation
 pages require it as `booking_token`; calendar download links must send it as
@@ -19,7 +26,10 @@ pages require it as `booking_token`; calendar download links must send it as
 
 Rooms include `location_id`, `location_name`, and a nested `location` array
 (from `SHB_Location::format_location()`). `room-search.php` renders a location
-selector when more than one active location exists.
+selector when more than one active location exists; on location pages the
+search is scoped via `$location_id`/`$locations`. Room type chips always
+render from `$all_room_types` and preselect `$room_type_filter` (the `?type=`
+query arg).
 
 ## Template Loading
 

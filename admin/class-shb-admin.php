@@ -30,6 +30,9 @@ class SHB_Admin {
         
         // Fix parent menu highlight for taxonomy page
         add_filter('parent_file', array(__CLASS__, 'fix_taxonomy_parent_menu'));
+
+        // Keep the taxonomy term screen highlighted under the Room Types screen.
+        add_filter('submenu_file', array(__CLASS__, 'fix_room_types_submenu_file'));
     }
 
     /**
@@ -131,6 +134,18 @@ class SHB_Admin {
         }
         return $parent_file;
     }
+
+    /**
+     * Highlight the Room Types defaults screen when editing terms, so the
+     * taxonomy screen always appears under the Room Types submenu.
+     */
+    public static function fix_room_types_submenu_file($submenu_file) {
+        global $current_screen;
+        if ($current_screen && $current_screen->taxonomy === 'shb_room_type') {
+            return 'shb-room-types';
+        }
+        return $submenu_file;
+    }
     
     /**
      * Add admin menu
@@ -161,13 +176,16 @@ class SHB_Admin {
             array(__CLASS__, 'dashboard_page')
         );
         
-        // Room Types submenu (taxonomy)
+        // Room Types submenu: a defaults editor screen, plus a link to the raw
+        // taxonomy for term creation/renaming.
+        $room_types_cap = current_user_can('manage_options') ? 'manage_options' : 'shb_manage_rooms';
         add_submenu_page(
             'sanctuary-hotel-booking',
             __('Room Types', 'sanctuary-hotel-booking'),
             __('Room Types', 'sanctuary-hotel-booking'),
-            'manage_options',
-            'edit-tags.php?taxonomy=shb_room_type&post_type=shb_room'
+            $room_types_cap,
+            'shb-room-types',
+            array('SHB_Admin_Room_Types', 'render_page')
         );
 
         // Locations submenu: admins manage all; location managers manage the
@@ -417,9 +435,9 @@ class SHB_Admin {
     public static function render_room_meta_box($post) {
         wp_nonce_field('shb_room_meta_nonce_action', 'shb_room_meta_nonce');
         
-        $room_type = get_post_meta($post->ID, '_shb_room_type', true) ?: 'standard';
-        $base_price = get_post_meta($post->ID, '_shb_base_price', true) ?: '100';
-        $max_guests = get_post_meta($post->ID, '_shb_max_guests', true) ?: '2';
+        $room_type = get_post_meta($post->ID, '_shb_room_type', true) ?: '';
+        $base_price = get_post_meta($post->ID, '_shb_base_price', true) ?: '';
+        $max_guests = get_post_meta($post->ID, '_shb_max_guests', true) ?: '';
         $amenities = get_post_meta($post->ID, '_shb_amenities', true);
         if (!is_array($amenities)) {
             $amenities = array();
@@ -430,10 +448,20 @@ class SHB_Admin {
         }
         $location_id = absint(get_post_meta($post->ID, '_shb_location_id', true));
 
+        // Preselect a location when arriving from the Locations hub.
+        if (!$location_id && isset($_GET['location_id'])) {
+            $location_id = absint($_GET['location_id']);
+        }
+
         // Non-admins only see locations they manage (admins see all).
         $locations = current_user_can('manage_options')
             ? SHB_Location::get_locations()
             : SHB_Location::get_locations_for_user();
+
+        // Room types (canonical taxonomy) + the stored defaults template for
+        // the room's current type, so the meta box can offer one-click prefill.
+        $room_types = SHB_Room_Type::get_room_types();
+        $room_type_defaults = SHB_Room_Type::get_defaults($room_type);
 
         include SHB_PLUGIN_DIR . 'admin/views/room-meta-box.php';
     }

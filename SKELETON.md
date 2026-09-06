@@ -5,6 +5,52 @@ Use this to understand how to call functions without reading full source code.
 
 ---
 
+## SHB_Room_Type (includes/class-shb-room-type.php)
+
+```php
+class SHB_Room_Type {
+    // Term meta keys that hold the defaults template for a room type
+    public static function get_meta_keys(): array
+
+    // Map of form field name => meta key for the defaults editor
+    public static function get_field_map(): array
+
+    // Register REST-visible room post meta and room type term meta (init, p0)
+    public static function register_meta(): void
+
+    // Hook term lifecycle (delete cleans up defaults meta)
+    public static function init(): void
+
+    // Get all room types (terms) with their defaults meta
+    public static function get_room_types(): array
+
+    // Get a single room type by term ID or slug
+    public static function get_room_type(int|string $term_id_or_slug): ?array
+
+    // Format a room type term into an array with its defaults meta
+    public static function format_room_type(WP_Term $term): array
+
+    // Stored defaults as room-field values, or null when none saved
+    public static function get_defaults(int|string $term_id_or_slug): ?array
+
+    // Save defaults from an admin form submission; returns term ID or WP_Error
+    public static function save_defaults(int $term_id, array $data): int|WP_Error
+
+    // Delete the defaults template for a term (term-delete hook)
+    public static function delete_defaults(int $term_id): void
+
+    // Sanitizer registry for room meta keys shared by save paths
+    public static function get_room_meta_registry(): array
+}
+```
+
+**Defaults meta keys (term meta on `shb_room_type`):**
+`_shb_type_base_price, _shb_type_max_guests, _shb_type_bed_type, _shb_type_room_size,
+_shb_type_floor, _shb_type_amenities, _shb_type_min_nights, _shb_type_max_nights,
+_shb_type_cancellation_policy`.
+
+---
+
 ## SHB_Location (includes/class-shb-location.php)
 
 ```php
@@ -174,9 +220,14 @@ class SHB_Room {
     // Ensure a room has a canonical shb_room_type term (from meta if needed)
     public static function sync_room_type_term(int $post_id): ?WP_Term
     
-    // Search available rooms (supports location_id filter)
+    // Count active rooms per room type at a location
+    public static function get_room_type_counts_by_location(int $location_id): array
+    // Returns: [['slug' => string, 'name' => string, 'count' => int], ...] sorted by count desc
+    
+    // Search available rooms (supports location_id and room_type filters)
     public static function search_available_rooms(
-        string $check_in, string $check_out, int $guests = 1, int $location_id = 0
+        string $check_in, string $check_out, int $guests = 1,
+        int $location_id = 0, string $room_type = ''
     ): array
     
     // Format room data from post
@@ -450,7 +501,7 @@ class SHB_Ajax {
     // All methods are static and called via WordPress AJAX hooks
     
     // PUBLIC ENDPOINTS (no login required)
-    public static function search_rooms(): void      // action: shb_search_rooms (accepts location_id)
+    public static function search_rooms(): void      // action: shb_search_rooms (accepts location_id, room_type; returns html + rooms)
     public static function check_availability(): void // action: shb_check_availability
     public static function get_room_prices(): void   // action: shb_get_room_prices
     public static function create_booking(): void    // action: shb_create_booking
@@ -463,6 +514,9 @@ class SHB_Ajax {
     public static function admin_create_room(): void      // action: shb_create_room
     public static function admin_delete_room(): void      // action: shb_delete_room
     public static function get_bookings_calendar(): void  // action: shb_get_bookings_calendar
+    public static function admin_get_room_type_defaults(): void // action: shb_admin_get_room_type_defaults
+    // Capability: manage_options | shb_manage_rooms. Reads room_type slug;
+    // returns { defaults: array|null }
 }
 ```
 
@@ -483,13 +537,17 @@ wp_send_json_error(['message' => 'Error description']);
 
 ```php
 class SHB_Shortcodes {
-    // Room search with results (location attr/selector)
+    // Room search with results (location attr/selector + room type chips)
     public static function room_search(array $atts): string
     // Shortcode: [shb_room_search location="12"]
     
     // Room list display (location attr)
     public static function room_list(array $atts): string
     // Shortcode: [shb_room_list columns="3" show_search="true" location="12"]
+    
+    // Renders a location property page (appended to single shb_location content)
+    public static function location_page_content(string $content): string
+    // Filter: the_content (only on singular shb_location in the main loop)
     
     // Booking form (location attr; validates room belongs to it)
     public static function booking_form(array $atts): string
@@ -539,3 +597,41 @@ get_option('shb_bank_transfer_enabled', '0');
 // All settings use 'shb_' prefix
 // See ARCHITECTURE.md for full settings list
 ```
+
+---
+
+## SHB_Admin_Locations (admin/class-shb-admin-locations.php)
+
+```php
+class SHB_Admin_Locations {
+    // Location list / add / edit / delete pages (action query arg routing)
+    public static function render_page(): void
+
+    // Edit (and create) page; loads rooms at the location for the hub view
+    public static function render_edit_page(int $location_id = 0): void
+
+    // Insert or update a location from form data; returns post ID or WP_Error
+    public static function save_location(array $data): int|WP_Error
+
+    // Delete an empty location (refuses while rooms or bookings reference it)
+    public static function delete_location(int $location_id): true|WP_Error
+
+    // Confirm screen shown before deletion
+    public static function render_delete_confirm(int $location_id): void
+}
+```
+
+---
+
+## SHB_Admin_Room_Types (admin/class-shb-admin-room-types.php)
+
+```php
+class SHB_Admin_Room_Types {
+    // Room Types defaults list + edit screen under Hotel Booking
+    public static function render_page(): void
+}
+```
+
+Nonce actions: `shb_location_save` (field `shb_location_nonce`),
+`shb_location_delete` (field `shb_location_delete_nonce`),
+`shb_room_type_defaults_save` (field `shb_room_type_defaults_nonce`).

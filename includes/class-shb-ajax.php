@@ -42,6 +42,7 @@ class SHB_Ajax
         add_action('wp_ajax_shb_admin_create_availability_block', array(__CLASS__, 'admin_create_availability_block'));
         add_action('wp_ajax_shb_admin_delete_availability_block', array(__CLASS__, 'admin_delete_availability_block'));
         add_action('wp_ajax_shb_admin_send_booking_email', array(__CLASS__, 'admin_send_booking_email'));
+        add_action('wp_ajax_shb_admin_get_room_type_defaults', array(__CLASS__, 'admin_get_room_type_defaults'));
     }
 
     /**
@@ -55,14 +56,30 @@ class SHB_Ajax
         $check_out = sanitize_text_field(wp_unslash($_POST['check_out'] ?? ''));
         $guests = max(1, absint($_POST['guests'] ?? 1));
         $location_id = absint($_POST['location_id'] ?? 0);
+        $room_type = sanitize_title(wp_unslash($_POST['room_type'] ?? ''));
 
         if (SHB_Booking::calculate_nights($check_in, $check_out) < 1) {
             wp_send_json_error(array('message' => __('Please select a valid check-in and check-out date', 'sanctuary-hotel-booking')));
         }
 
-        $rooms = SHB_Room::search_available_rooms($check_in, $check_out, $guests, $location_id);
+        $rooms = SHB_Room::search_available_rooms($check_in, $check_out, $guests, $location_id, $room_type);
 
-        wp_send_json_success(array('rooms' => $rooms));
+        // Render the canonical room-card partial server-side so the public JS
+        // only injects trusted HTML (single source of truth for card markup).
+        $dates = array(
+            'check_in' => $check_in,
+            'check_out' => $check_out,
+            'guests' => $guests,
+        );
+        $html = '';
+        foreach ($rooms as $room) {
+            $price = isset($room['calculated_price']) ? $room['calculated_price'] : null;
+            ob_start();
+            include SHB_PLUGIN_DIR . 'templates/room-card.php';
+            $html .= ob_get_clean();
+        }
+
+        wp_send_json_success(array('rooms' => $rooms, 'html' => $html));
     }
 
     /**
@@ -490,5 +507,23 @@ class SHB_Ajax
         }
 
         wp_send_json_success(array('message' => __('Email sent successfully', 'sanctuary-hotel-booking')));
+    }
+
+    /**
+     * Admin: Get the defaults template stored on a room type term.
+     * Used by the room meta box to prefill new rooms of that type.
+     */
+    public static function admin_get_room_type_defaults()
+    {
+        check_ajax_referer('shb_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options') && !current_user_can('shb_manage_rooms')) {
+            wp_send_json_error(array('message' => __('Unauthorized', 'sanctuary-hotel-booking')));
+        }
+
+        $room_type = sanitize_text_field(wp_unslash($_POST['room_type'] ?? ''));
+        $defaults = SHB_Room_Type::get_defaults($room_type);
+
+        wp_send_json_success(array('defaults' => $defaults));
     }
 }

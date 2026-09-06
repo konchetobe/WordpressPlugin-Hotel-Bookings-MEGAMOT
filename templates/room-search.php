@@ -7,12 +7,15 @@
                     <select id="shb-location" name="location">
                         <option value=""><?php _e('All Locations', 'sanctuary-hotel-booking'); ?></option>
                         <?php foreach ($locations as $loc): ?>
-                            <option value="<?php echo esc_attr($loc['id']); ?>" <?php selected($location, $loc['id']); ?>>
+                            <option value="<?php echo esc_attr($loc['id']); ?>" <?php selected($location_id, $loc['id']); ?>>
                                 <?php echo esc_html($loc['name']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
+            <?php elseif (!empty($location_id)): ?>
+                <?php // Single-property context (e.g. a location page): scope silently. ?>
+                <input type="hidden" id="shb-location" name="location" value="<?php echo esc_attr($location_id); ?>">
             <?php endif; ?>
             <div class="shb-field">
                 <label for="shb-check-in"><?php _e('Check-in', 'sanctuary-hotel-booking'); ?></label>
@@ -39,6 +42,29 @@
                 </button>
             </div>
         </div>
+
+        <?php
+        // Room type filter chips. On a location page the search is scoped to a
+        // single property and $location_id is preset; the chips always render.
+        $room_types = !empty($all_room_types) ? $all_room_types : SHB_Room_Type::get_room_types();
+        ?>
+        <?php if (!empty($room_types)): ?>
+            <div class="shb-search-filters" id="shb-search-filters">
+                <span class="shb-filter-label"><?php _e('Room type:', 'sanctuary-hotel-booking'); ?></span>
+                <?php foreach ($room_types as $type): ?>
+                    <?php
+                    $chip_type = $type['slug'];
+                    $is_active_chip = ($room_type_filter !== '') && ($room_type_filter === $chip_type);
+                    ?>
+                    <button type="button" class="shb-filter-chip<?php echo $is_active_chip ? ' active' : ''; ?>"
+                            data-type="<?php echo esc_attr($chip_type); ?>">
+                        <?php echo esc_html($type['name']); ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+            <input type="hidden" id="shb-room-type" name="room_type"
+                   value="<?php echo esc_attr($room_type_filter); ?>">
+        <?php endif; ?>
     </form>
     
     <div id="shb-search-results" class="shb-search-results" style="display: none;" data-testid="shb-search-results">

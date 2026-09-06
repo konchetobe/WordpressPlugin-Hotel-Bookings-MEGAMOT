@@ -128,5 +128,93 @@ if (!empty($test_room)) {
 shb_verify('administrator has shb caps', user_can(wp_get_current_user(), 'shb_manage_bookings'));
 shb_verify('location manager role exists', !is_null(get_role('shb_location_manager')));
 
+// 9. Room type defaults round-trip (create/read/delete on a throwaway term).
+$test_term = wp_insert_term('Verify Type ' . wp_rand(1000, 9999), 'shb_room_type');
+if (!is_wp_error($test_term)) {
+    $term_id = $test_term['term_id'];
+    $saved = SHB_Room_Type::save_defaults($term_id, array(
+        'type_base_price' => '99.5',
+        'type_max_guests' => '3',
+        'type_bed_type' => 'king',
+        'type_room_size' => '24',
+        'type_floor' => '2',
+        'type_amenities' => array('WiFi', 'Balcony'),
+        'type_min_nights' => '2',
+        'type_max_nights' => '14',
+        'type_cancellation_policy' => 'moderate',
+    ));
+    shb_verify('room type defaults saved', !is_wp_error($saved), is_wp_error($saved) ? $saved->get_error_message() : '');
+
+    $defaults = SHB_Room_Type::get_defaults($term_id);
+    shb_verify(
+        'room type defaults readable',
+        is_array($defaults) && isset($defaults['_shb_type_base_price']) && abs(floatval($defaults['_shb_type_base_price']) - 99.5) < 0.001,
+        is_array($defaults) ? print_r($defaults, true) : 'null'
+    );
+
+    // Search-by-type only returns rooms of that type. Create a matching room.
+    $term = get_term($term_id, 'shb_room_type');
+    $term_slug = $term && !is_wp_error($term) ? $term->slug : 'verify-type-' . $term_id;
+    $room_id = wp_insert_post(array(
+        'post_title' => 'Verify Type Room',
+        'post_type' => 'shb_room',
+        'post_status' => 'publish',
+    ));
+    if ($room_id && !is_wp_error($room_id)) {
+        $default_location = SHB_Location::get_default_location_id();
+        update_post_meta($room_id, '_shb_location_id', $default_location);
+        update_post_meta($room_id, '_shb_is_active', '1');
+        update_post_meta($room_id, '_shb_room_type', $term_slug);
+        wp_set_object_terms($room_id, array($term_id), 'shb_room_type', false);
+
+        $check_in = gmdate('Y-m-d', strtotime('+45 days'));
+        $check_out = gmdate('Y-m-d', strtotime('+46 days'));
+        $results = SHB_Room::search_available_rooms($check_in, $check_out, 1, $default_location, $term_slug);
+        shb_verify('search filters by room type', count($results) === 1 && $results[0]['id'] === $room_id, 'expected 1 result');
+
+        $other = SHB_Room::search_available_rooms($check_in, $check_out, 1, $default_location, 'standard');
+        $found_other = 0;
+        foreach ($other as $r) {
+            if ($r['id'] === $room_id) {
+                $found_other++;
+            }
+        }
+        shb_verify('search excludes wrong type', $found_other === 0, 'type mismatch leaked through');
+
+        wp_delete_post($room_id, true);
+    } else {
+        echo "SKIP  room type search (could not create test room)\n";
+    }
+
+    wp_delete_term($term_id, 'shb_room_type');
+    shb_verify('term delete cleans type meta', empty(get_term_meta($term_id, '_shb_type_base_price', true)));
+} else {
+    echo "SKIP  room type defaults (could not create test term)\n";
+}
+
+// 10. Location delete guard: refuses while a room exists.
+$guard_location = wp_insert_post(array(
+    'post_title' => 'Verify Guard Location',
+    'post_type' => 'shb_location',
+    'post_status' => 'publish',
+));
+if ($guard_location && !is_wp_error($guard_location)) {
+    $guard_room = wp_insert_post(array(
+        'post_title' => 'Verify Guard Room',
+        'post_type' => 'shb_room',
+        'post_status' => 'publish',
+    ));
+    if ($guard_room && !is_wp_error($guard_room)) {
+        update_post_meta($guard_room, '_shb_location_id', $guard_location);
+        $result = SHB_Admin_Locations::delete_location($guard_location);
+        shb_verify('location delete refused with rooms', is_wp_error($result) && $result->get_error_code() === 'has_rooms');
+        wp_delete_post($guard_room, true);
+    }
+    $result = SHB_Admin_Locations::delete_location($guard_location);
+    shb_verify('empty location deletable', $result === true, is_wp_error($result) ? $result->get_error_message() : 'unexpected result');
+} else {
+    echo "SKIP  location delete guard (could not create test location)\n";
+}
+
 echo $failures === 0 ? "\nAll checks passed.\n" : "\n{$failures} check(s) failed.\n";
 exit($failures === 0 ? 0 : 1);
