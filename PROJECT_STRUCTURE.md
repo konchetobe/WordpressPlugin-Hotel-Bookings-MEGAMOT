@@ -100,7 +100,7 @@ sanctuary-hotel-booking/
 | Manage locations | `includes/class-shb-location.php`, `admin/class-shb-admin-locations.php` |
 | Allocation / double-booking safety | `includes/class-shb-room-nights.php` |
 | Run the migration | `includes/class-shb-migration.php` |
-| Release a new version | `.github/workflows/release.yml` (manual dispatch) |
+| Release a new version | `.github/workflows/release.yml` (dispatch via API — see ARCHITECTURE.md "Releasing") |
 | Edit booking form UI | `templates/booking-form.php` |
 | Change admin settings | `admin/class-shb-admin-settings.php` |
 | Modify frontend styles | `assets/css/public.css` |

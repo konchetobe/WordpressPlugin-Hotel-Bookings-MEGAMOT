@@ -536,6 +536,50 @@ Emails are sent via `SHB_Emails` class using `wp_mail()`.
 
 ---
 
+## 🚀 Releasing
+
+The **Bump Version & Release** workflow (`.github/workflows/release.yml`,
+triggered by `workflow_dispatch`) bumps the version headers + readme stable
+tag, commits `Bump version to X`, tags `vX.Y.Z`, builds the plugin ZIP, and
+publishes a GitHub Release that the bundled Plugin Update Checker ships to
+sites. It builds from the `main` branch at the tagged commit, so **feature
+code and the changelog entry must be committed and pushed to `main` first**;
+the version headers are left untouched (the workflow's bump commit lands on
+top).
+
+### Triggering the workflow (no `gh` CLI needed)
+
+The agent can dispatch the workflow itself using the token already stored in
+git's credential manager — no manual "Run workflow" click and no user handoff:
+
+```powershell
+# 1. Retrieve the stored GitHub token (user is konchetobe).
+"protocol=https`nhost=github.com`n`n" | git credential fill
+
+# 2. Dispatch the workflow against main with the target version.
+curl -s -X POST `
+  -H "Authorization: Bearer <token>" `
+  -H "Accept: application/vnd.github+json" `
+  -H "X-GitHub-Api-Version: 2022-11-28" `
+  "https://api.github.com/repos/konchetobe/WordpressPlugin-Hotel-Bookings-MEGAMOT/actions/workflows/release.yml/dispatches" `
+  -d "{\"ref\":\"main\",\"inputs\":{\"version\":\"1.4.2\",\"prerelease\":false}}" `
+  -w "HTTP %{http_code}`n"   # 204 = accepted
+
+# 3. Watch the run until it completes.
+#    GET /repos/.../actions/runs?event=workflow_dispatch&per_page=1
+#    (then GET the run id until "status":"completed")
+
+# 4. Verify the release + tag + asset landed (authoritative, via API):
+#    GET /repos/.../releases/tags/v1.4.2
+#    git ls-remote origin main refs/tags/v1.4.2
+```
+
+The release is only "done" when the GitHub **Releases** page shows the new
+tag with its `sanctuary-hotel-booking-<version>.zip` asset — code version
+headers on `main` alone do not count as released.
+
+---
+
 ## 🧪 Testing Considerations
 
 ### Key Test Scenarios
