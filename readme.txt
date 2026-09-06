@@ -72,6 +72,14 @@ Yes, go to Hotel Booking > Availability to create date blocks for any room.
 
 == Changelog ==
 
+= 1.4.2 =
+* **Room type defaults** — room types now carry a defaults template (base price, max guests, bed type, size, floor, amenities, night limits, cancellation policy) that prefills new rooms; rooms stay fully editable per unit.
+* **Room Types screen** — new **Hotel Booking → Room Types** page to edit each type's defaults; the room editor's type dropdown is now driven by the real taxonomy (legacy types are preserved).
+* **Location property hub** — the Locations list shows a per-type room breakdown with Rooms/View Page actions, and each location's edit page lists its rooms with an "Add Room here" link that preselects the location.
+* **Safe location deletion** — deleting a location now requires an admin, asks for confirmation, and refuses while rooms or bookings still reference it.
+* **Location property pages** — each location's public URL now renders a real property page with hero/contact details, room-type summary cards (count + from price), and an availability search scoped to that property.
+* **Room type search filter** — the room search form gained room-type filter chips; search results are now server-rendered from a single shared card partial used by both lists and search.
+
 = 1.4.1 =
 * **Fix** — resolved a fatal error on the **Hotel Booking → Locations** admin page. The Locations controller class was never loaded, so opening the page crashed with "There has been a critical error on this website." The missing include is now loaded.
 
