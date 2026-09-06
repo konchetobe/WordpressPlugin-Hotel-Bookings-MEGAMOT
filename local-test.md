@@ -16,9 +16,11 @@ Test new plugin versions locally **before** pushing to GitHub.
 ## Daily workflow
 
 ```bat
-REM 1. Start MariaDB (if not already running)
+REM 1. Start MariaDB (starts detached; safe to double-click or run from a terminal)
 C:\tools\mariadb\mariadb-11.4.13-winx64\start-mariadb.bat
-REM (stop with stop-mariadb.bat)
+REM    -> prints "MariaDB started on port 3306" (or "already running")
+REM    Stop with: C:\tools\mariadb\mariadb-11.4.13-winx64\stop-mariadb.bat
+REM    (root password is read from stop.cnf next to the scripts)
 
 REM 2. Serve the site (from any folder)
 wp server --host=127.0.0.1 --port=8080 --path="X:\Wordpress Local instal\wordpress-7.1\wordpress"
@@ -27,6 +29,13 @@ REM → http://localhost:8080  (wp-admin: /wp-admin, admin/admin password in the
 REM 3. Run the plugin verification suite (all checks must PASS)
 wp eval-file tests\verify.php --path="X:\Wordpress Local instal\wordpress-7.1\wordpress"
 ```
+
+If MariaDB fails to start, check `C:\tools\mariadb\mariadb-11.4.13-winx64\data\*.err`.
+A past cause: the data files only allowed Administrators/SYSTEM to write, so a
+normal-user `mysqld` aborted with "InnoDB: The data file './ibdata1' must be
+writable". Fixed by granting `BUILTIN\Users` Modify recursively on the data
+dir. If you ever re-init or move the data dir and it stops starting, re-apply
+that ACL grant.
 
 Because the plugin is a **junction** to this repo, code edits are live
 immediately — just refresh the browser (PHP re-reads files per request).
