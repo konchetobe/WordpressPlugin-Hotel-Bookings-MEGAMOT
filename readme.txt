@@ -72,6 +72,13 @@ Yes, go to Hotel Booking > Availability to create date blocks for any room.
 
 == Changelog ==
 
+= 1.4.3 =
+* **Room Setup screen** — rooms are now created and edited on a plugin-owned **Hotel Booking → Rooms** screen instead of the Gutenberg editor. One form covers name, slug, description, featured image + gallery (media picker), location, room type, price, guests, bed, size, floor, amenities, policies, and status.
+* **Rooms list** — a plugin list with location filter, type/location/price columns, view-page links, and guarded deletion (refused while the room has active bookings).
+* **Room Types manager** — the Room Types screen now creates, renames, and deletes types (with a per-type room count) alongside the defaults editor; deleting a type is refused while rooms use it.
+* **Searchable attributes** — the room search gained bed type, "Views & outdoor", and amenity filter chips. Multi-select amenities match rooms that have ALL chosen options.
+* **Rich room pages** — each room's public page now shows a photo gallery, description, specs (guests, bed, size, floor, from-price, cancellation policy), grouped amenities, the property card, and an on-page booking form with live pricing.
+
 = 1.4.2 =
 * **Room type defaults** — room types now carry a defaults template (base price, max guests, bed type, size, floor, amenities, night limits, cancellation policy) that prefills new rooms; rooms stay fully editable per unit.
 * **Room Types screen** — new **Hotel Booking → Room Types** page to edit each type's defaults; the room editor's type dropdown is now driven by the real taxonomy (legacy types are preserved).
