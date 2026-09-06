@@ -3,7 +3,7 @@
  * Plugin Name: Sanctuary Hotel Booking
  * Plugin URI: https://example.com/sanctuary-hotel-booking
  * Description: A comprehensive hotel/guest house booking reservation system with Stripe/PayPal payments and calendar event generation.
- * Version: 1.4.2
+ * Version: 1.4.3
  * Author: Sanctuary Hotels
  * Author URI: https://example.com
  * License: GPL v2 or later
@@ -18,8 +18,8 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin constants
-define('SHB_VERSION', '1.4.2');
-define('SHB_DB_VERSION', '1.4.2');
+define('SHB_VERSION', '1.4.3');
+define('SHB_DB_VERSION', '1.4.3');
 define('SHB_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SHB_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('SHB_PLUGIN_BASENAME', plugin_basename(__FILE__));
